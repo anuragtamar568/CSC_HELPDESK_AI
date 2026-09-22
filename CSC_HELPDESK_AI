@@ -1,0 +1,6 @@
+CSC_HELPDESK_AI
+│
+├── app.py
+├── requirements.txt
+├── README.md
+└── .gitignore
