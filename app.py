@@ -1,306 +1,303 @@
 import os
 import time
+import io
+
 import streamlit as st
 from google import genai
+from PIL import Image, ImageDraw, ImageFilter
 
 # =========================================================
-# PAGE SETTINGS
+# PAGE
 # =========================================================
 
 st.set_page_config(
     page_title="CSC_HELPDESK_AI",
     page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
 # =========================================================
-# CSS / DESIGN
+# CREATE ROBOT LOGO AUTOMATICALLY
 # =========================================================
 
-st.markdown("""
+def create_robot_logo():
+    img = Image.new("RGBA", (500, 500), (0, 0, 0, 0))
+
+    glow = Image.new("RGBA", (500, 500), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+
+    gd.ellipse(
+        (55, 55, 445, 445),
+        fill=(70, 120, 255, 90)
+    )
+
+    glow = glow.filter(ImageFilter.GaussianBlur(25))
+    img.alpha_composite(glow)
+
+    d = ImageDraw.Draw(img)
+
+    # Outer rings
+    d.ellipse(
+        (70, 70, 430, 430),
+        outline=(30, 205, 255, 255),
+        width=10
+    )
+
+    d.ellipse(
+        (95, 95, 405, 405),
+        outline=(145, 75, 255, 230),
+        width=8
+    )
+
+    # Antenna
+    d.line(
+        (250, 155, 250, 105),
+        fill=(55, 75, 160, 255),
+        width=8
+    )
+
+    d.ellipse(
+        (237, 82, 263, 108),
+        fill=(70, 200, 255, 255)
+    )
+
+    # Ears
+    d.rounded_rectangle(
+        (90, 210, 135, 295),
+        radius=18,
+        fill=(145, 165, 215, 255)
+    )
+
+    d.rounded_rectangle(
+        (365, 210, 410, 295),
+        radius=18,
+        fill=(145, 165, 215, 255)
+    )
+
+    # Robot head
+    d.rounded_rectangle(
+        (120, 145, 380, 350),
+        radius=60,
+        fill=(247, 249, 255, 255),
+        outline=(65, 85, 170, 255),
+        width=8
+    )
+
+    # Face
+    d.rounded_rectangle(
+        (155, 190, 345, 305),
+        radius=35,
+        fill=(18, 28, 68, 255)
+    )
+
+    # Eyes
+    d.ellipse(
+        (195, 225, 230, 260),
+        fill=(60, 225, 255, 255)
+    )
+
+    d.ellipse(
+        (270, 225, 305, 260),
+        fill=(60, 225, 255, 255)
+    )
+
+    # AI badge
+    d.rounded_rectangle(
+        (195, 315, 305, 365),
+        radius=16,
+        fill=(85, 65, 230, 255)
+    )
+
+    d.text(
+        (228, 326),
+        "AI",
+        fill=(255, 255, 255, 255)
+    )
+
+    return img
+
+
+logo = create_robot_logo()
+
+# =========================================================
+# CSS
+# =========================================================
+
+st.markdown(
+    """
 <style>
 
 .stApp {
     background:
-        radial-gradient(circle at 5% 5%, rgba(40,130,255,0.20), transparent 28%),
-        radial-gradient(circle at 95% 10%, rgba(150,70,255,0.20), transparent 30%),
-        linear-gradient(135deg, #f4f8ff 0%, #edf2ff 48%, #faf3ff 100%);
+        radial-gradient(
+            circle at 10% 5%,
+            rgba(40, 150, 255, 0.22),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 90% 5%,
+            rgba(160, 80, 255, 0.22),
+            transparent 30%
+        ),
+        linear-gradient(
+            135deg,
+            #eef6ff,
+            #f2f0ff,
+            #faf4ff
+        );
 }
 
-/* Main width */
 .block-container {
     max-width: 1250px;
-    padding-top: 1.2rem;
-    padding-bottom: 3rem;
+    padding-top: 20px;
+    padding-bottom: 50px;
 }
 
-/* =====================================================
-   HEADER
-   ===================================================== */
+/* HERO */
 
-.hero {
-    position: relative;
+.hero-box {
     text-align: center;
-    padding: 30px 20px 25px 20px;
+    padding: 25px;
     border-radius: 30px;
-    background:
-        radial-gradient(circle at 50% 0%, rgba(80,170,255,0.20), transparent 35%),
-        linear-gradient(135deg, rgba(255,255,255,0.96), rgba(241,239,255,0.96));
-    border: 1px solid rgba(90,110,255,0.20);
+    background: rgba(255,255,255,0.82);
+    border: 1px solid rgba(90,100,255,0.18);
     box-shadow:
-        0 18px 50px rgba(55,75,180,0.15),
-        inset 0 0 40px rgba(110,100,255,0.04);
-    overflow: hidden;
+        0 15px 45px rgba(60,80,180,0.14);
 }
 
-.hero-logo {
-    width: 105px;
-    height: 105px;
-    margin: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-size: 58px;
-    background:
-        radial-gradient(circle, #ffffff 20%, #dce9ff 55%, #b8aaff 100%);
-    border: 5px solid #6d65ff;
-    box-shadow:
-        0 0 12px #25cfff,
-        0 0 28px #6d65ff,
-        0 0 55px rgba(100,80,255,0.35);
-}
-
-.hero-title {
-    margin-top: 14px;
+.title {
     font-size: 46px;
     font-weight: 900;
     letter-spacing: 1px;
-    background: linear-gradient(90deg, #1769ff, #6048ff, #a13cff);
+    background: linear-gradient(
+        90deg,
+        #1769ff,
+        #6248ff,
+        #a33cff
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-.hero-subtitle {
+.subtitle {
+    color: #344268;
     font-size: 18px;
-    color: #303c63;
-    margin-top: 4px;
 }
 
 .online {
     display: inline-block;
-    margin-top: 13px;
-    padding: 8px 18px;
+    margin-top: 12px;
+    padding: 8px 20px;
     border-radius: 30px;
-    background: #e9fff1;
-    color: #118647;
-    border: 1px solid #8de0ad;
+    color: #118348;
+    background: #e8fff0;
+    border: 1px solid #8ce0ad;
     font-weight: 700;
-    font-size: 14px;
 }
 
 .tagline {
     margin-top: 12px;
-    color: #536080;
-    font-size: 14px;
+    color: #66708b;
 }
 
-/* =====================================================
-   SECTION
-   ===================================================== */
+/* SERVICE CARDS */
 
-.section-title {
+.service-card {
+    text-align: center;
+    padding: 18px 7px;
+    min-height: 105px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.90);
+    border: 1px solid rgba(90,110,255,0.15);
+    box-shadow: 0 7px 22px rgba(60,75,160,0.08);
+}
+
+.service-icon {
+    font-size: 34px;
+}
+
+.service-name {
+    color: #26365f;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 7px;
+}
+
+/* SECTION */
+
+.section {
     font-size: 22px;
     font-weight: 800;
-    color: #1d2c55;
+    color: #203260;
     margin-top: 25px;
     margin-bottom: 12px;
 }
 
-/* =====================================================
-   SERVICE CARDS
-   ===================================================== */
+/* POPULAR */
 
-.service-card {
-    text-align: center;
-    min-height: 115px;
-    padding: 17px 8px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.90);
-    border: 1px solid rgba(90,110,255,0.16);
-    box-shadow: 0 7px 22px rgba(65,75,160,0.08);
-    transition: 0.25s;
-}
-
-.service-card:hover {
-    transform: translateY(-4px);
-    box-shadow:
-        0 12px 28px rgba(65,75,180,0.16),
-        0 0 18px rgba(90,100,255,0.12);
-}
-
-.service-icon {
-    font-size: 35px;
-}
-
-.service-name {
-    margin-top: 7px;
-    color: #24345e;
-    font-size: 14px;
-    font-weight: 700;
-}
-
-/* =====================================================
-   CHAT AREA
-   ===================================================== */
-
-.chat-box {
-    margin-top: 22px;
-    padding: 22px;
-    border-radius: 25px;
-    background: rgba(255,255,255,0.76);
-    border: 1px solid rgba(90,105,255,0.17);
-    box-shadow: 0 12px 35px rgba(60,70,150,0.09);
-}
-
-/* =====================================================
-   POPULAR QUESTIONS
-   ===================================================== */
-
-.popular-box {
+.popular {
     padding: 18px;
     border-radius: 22px;
-    background: linear-gradient(
-        135deg,
-        rgba(235,242,255,0.95),
-        rgba(248,241,255,0.95)
-    );
-    border: 1px solid rgba(90,110,255,0.15);
+    background: rgba(255,255,255,0.78);
+    border: 1px solid rgba(90,100,255,0.15);
+    box-shadow: 0 8px 25px rgba(70,80,160,0.07);
 }
 
-.popular-title {
-    color: #243a78;
-    font-size: 18px;
-    font-weight: 800;
-}
-
-/* =====================================================
-   BUTTONS
-   ===================================================== */
+/* BUTTON */
 
 .stButton > button {
     width: 100%;
-    min-height: 45px;
-    border-radius: 15px !important;
-    border: 1px solid rgba(75,100,255,0.22) !important;
-    background: rgba(255,255,255,0.94) !important;
-    color: #25458d !important;
-    font-weight: 650 !important;
-    box-shadow: 0 5px 15px rgba(65,80,170,0.07);
-    transition: 0.2s;
+    border-radius: 15px;
+    border: 1px solid #b9c5ff;
+    background: white;
+    color: #24458f;
+    font-weight: 650;
 }
 
 .stButton > button:hover {
-    border-color: #6558ff !important;
-    color: #4c43d8 !important;
-    box-shadow:
-        0 7px 20px rgba(90,75,220,0.15),
-        0 0 12px rgba(90,80,255,0.10);
+    border-color: #6655ff;
+    color: #5544dc;
+    box-shadow: 0 0 15px rgba(90,80,255,0.15);
 }
 
-/* New chat button */
-.new-chat button {
-    background: linear-gradient(135deg, #624bff, #9546ff) !important;
-    color: white !important;
-}
-
-/* =====================================================
-   CHAT INPUT
-   ===================================================== */
-
-[data-testid="stChatInput"] {
-    margin-top: 15px;
-}
+/* CHAT INPUT */
 
 [data-testid="stChatInput"] textarea {
-    border: 2px solid #7164ff !important;
-    border-radius: 20px !important;
     background: white !important;
-    color: #17254a !important;
+    border: 2px solid #675cff !important;
+    border-radius: 20px !important;
     font-size: 16px !important;
-    box-shadow:
-        0 0 15px rgba(100,90,255,0.10);
 }
 
-[data-testid="stChatInput"] textarea:focus {
-    border-color: #4d8cff !important;
-    box-shadow:
-        0 0 20px rgba(80,100,255,0.20) !important;
-}
-
-/* =====================================================
-   CHAT MESSAGES
-   ===================================================== */
-
-[data-testid="stChatMessage"] {
-    border-radius: 20px;
-    margin-bottom: 10px;
-}
-
-/* =====================================================
-   FOOTER
-   ===================================================== */
+/* FOOTER */
 
 .footer {
-    margin-top: 35px;
-    padding: 22px;
     text-align: center;
-    color: #58627c;
+    margin-top: 35px;
+    padding: 20px;
+    color: #66708b;
     font-size: 13px;
 }
 
-.footer-main {
-    font-weight: 800;
-    color: #263c72;
-    font-size: 15px;
-}
+@media(max-width:700px) {
 
-.footer-line {
-    margin-top: 7px;
-}
-
-/* =====================================================
-   MOBILE
-   ===================================================== */
-
-@media (max-width: 700px) {
-
-    .hero-title {
+    .title {
         font-size: 30px;
     }
 
-    .hero-subtitle {
+    .subtitle {
         font-size: 14px;
     }
 
-    .hero-logo {
-        width: 85px;
-        height: 85px;
-        font-size: 46px;
-    }
-
-    .block-container {
-        padding-left: 12px;
-        padding-right: 12px;
-    }
 }
 
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True
+)
 
 # =========================================================
-# GEMINI API
+# GEMINI
 # =========================================================
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -312,14 +309,16 @@ if not API_KEY:
 client = genai.Client(api_key=API_KEY)
 
 # =========================================================
-# SYSTEM PROMPT
+# AI PROMPT
 # =========================================================
 
 SYSTEM_PROMPT = """
-You are CSC_HELPDESK_AI, a helpful digital assistant for CSC
-and Indian government service guidance.
+You are CSC_HELPDESK_AI.
 
-You help users with:
+You are a helpful assistant for CSC and Indian government
+digital services.
+
+Help users with:
 
 Aadhaar
 PAN Card
@@ -334,21 +333,19 @@ Pension
 e-District
 Government forms
 CSC services
-General digital service guidance
 
 Rules:
 
-1. Reply in Hindi when the user writes Hindi.
-2. Reply in Hinglish when the user writes Hinglish.
-3. Reply in English when the user writes English.
-4. Keep answers simple and easy to understand.
-5. Give step-by-step instructions when useful.
-6. Do not invent government rules, fees, websites or deadlines.
-7. If information may have changed, tell the user to verify it
-   on the official government portal.
-8. Never ask for OTP, PIN, password or sensitive credentials.
-9. Be polite and helpful.
-10. Give a direct answer first.
+1. Hindi question = Hindi answer.
+2. Hinglish question = Hinglish answer.
+3. English question = English answer.
+4. Keep answers simple.
+5. Give step-by-step instructions.
+6. Never invent fees, rules or deadlines.
+7. Tell users to verify changing information on official portals.
+8. Never ask for OTP, password, PIN or sensitive credentials.
+9. Be polite.
+10. Give the direct answer first.
 """
 
 # =========================================================
@@ -359,48 +356,68 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # =========================================================
-# HERO HEADER
+# HEADER
 # =========================================================
 
-st.markdown("""
-<div class="hero">
+st.markdown(
+    '<div class="hero-box">',
+    unsafe_allow_html=True
+)
 
-    <div class="hero-logo">
-        🤖
-    </div>
+col_logo, col_title = st.columns([1, 4])
 
-    <div class="hero-title">
-        CSC_HELPDESK_AI
-    </div>
+with col_logo:
+    st.image(
+        logo,
+        width=145
+    )
 
-    <div class="hero-subtitle">
-        Smart Assistant for CSC & Government Services
-    </div>
+with col_title:
+    st.markdown(
+        '<div class="title">CSC_HELPDESK_AI</div>',
+        unsafe_allow_html=True
+    )
 
-    <div class="online">
-        🟢 AI Assistant Online
-    </div>
+    st.markdown(
+        '<div class="subtitle">'
+        'Smart Assistant for CSC & Government Services'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
-    <div class="tagline">
-        Aapka Sawal &nbsp; | &nbsp; Hamari Madad &nbsp; | &nbsp; Digital Bharat
-    </div>
+    st.markdown(
+        '<div class="online">'
+        '🟢 AI Assistant Online'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
-</div>
-""", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="tagline">'
+        'Aapka Sawal &nbsp; | &nbsp; Hamari Madad '
+        '&nbsp; | &nbsp; Digital Bharat'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+st.markdown(
+    '</div>',
+    unsafe_allow_html=True
+)
 
 # =========================================================
 # SERVICES
 # =========================================================
 
 st.markdown(
-    '<div class="section-title">🛠️ CSC Services</div>',
+    '<div class="section">🛠️ CSC Services</div>',
     unsafe_allow_html=True
 )
 
 services = [
     ("🪪", "Aadhaar"),
     ("💳", "PAN Card"),
-    ("🛒", "Ration Card"),
+    ("🛍️", "Ration Card"),
     ("🌱", "PM Kisan"),
     ("🏥", "Ayushman"),
     ("📜", "Certificates"),
@@ -410,114 +427,96 @@ services = [
     ("•••", "More Services")
 ]
 
-service_columns = st.columns(10)
+columns = st.columns(10)
 
-for column, (icon, name) in zip(service_columns, services):
+for col, item in zip(columns, services):
 
-    with column:
+    with col:
+
         st.markdown(
             f"""
             <div class="service-card">
-                <div class="service-icon">{icon}</div>
-                <div class="service-name">{name}</div>
+                <div class="service-icon">{item[0]}</div>
+                <div class="service-name">{item[1]}</div>
             </div>
             """,
             unsafe_allow_html=True
         )
 
 # =========================================================
-# NEW CHAT + HISTORY
+# NEW CHAT / HISTORY
 # =========================================================
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns([6, 1.5, 1.5])
+c1, c2, c3 = st.columns([7, 1.5, 1.5])
 
-with col2:
+with c2:
 
-    if st.button("🔄 New Chat", use_container_width=True):
+    if st.button("🔄 New Chat"):
 
         st.session_state.messages = []
         st.rerun()
 
-with col3:
+with c3:
 
-    if st.button("🕘 History", use_container_width=True):
+    if st.button("🕘 History"):
 
-        if st.session_state.messages:
-
-            st.info(
-                f"{len(st.session_state.messages)} messages इस chat में हैं।"
-            )
-
-        else:
-
-            st.info("अभी कोई chat history नहीं है।")
+        st.info(
+            f"Current chat में "
+            f"{len(st.session_state.messages)} messages हैं।"
+        )
 
 # =========================================================
 # POPULAR QUESTIONS
 # =========================================================
 
 st.markdown(
-    '<div class="section-title">💡 Popular Questions</div>',
+    '<div class="section">💡 Popular Questions</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="popular-box">'
-    '<div class="popular-title">'
-    '💡 एक क्लिक में अपना सवाल पूछें'
-    '</div>'
+    '<div class="popular">',
+    unsafe_allow_html=True
+)
+
+p1, p2, p3, p4 = st.columns(4)
+
+popular_question = None
+
+with p1:
+    if st.button("🪪 Aadhaar kaise banega?"):
+        popular_question = "Aadhaar card kaise banega?"
+
+with p2:
+    if st.button("💳 PAN card kaise banega?"):
+        popular_question = "PAN card kaise banega?"
+
+with p3:
+    if st.button("🛍️ Ration card kaise banega?"):
+        popular_question = "Ration card kaise banega?"
+
+with p4:
+    if st.button("🌱 PM Kisan registration?"):
+        popular_question = "PM Kisan registration kaise kare?"
+
+st.markdown(
     '</div>',
     unsafe_allow_html=True
 )
 
-questions = [
-    "Aadhaar kaise banega?",
-    "PAN card kaise banega?",
-    "Ration card kaise banega?",
-    "PM Kisan registration kaise kare?",
-    "Ayushman card kaise banega?",
-    "Income certificate kaise banega?"
-]
-
-q1, q2, q3 = st.columns(3)
-
-selected_question = None
-
-with q1:
-    if st.button("🪪 Aadhaar kaise banega?"):
-        selected_question = questions[0]
-
-with q2:
-    if st.button("💳 PAN card kaise banega?"):
-        selected_question = questions[1]
-
-with q3:
-    if st.button("🛒 Ration card kaise banega?"):
-        selected_question = questions[2]
-
-q4, q5, q6 = st.columns(3)
-
-with q4:
-    if st.button("🌱 PM Kisan registration kaise kare?"):
-        selected_question = questions[3]
-
-with q5:
-    if st.button("🏥 Ayushman card kaise banega?"):
-        selected_question = questions[4]
-
-with q6:
-    if st.button("📜 Income certificate kaise banega?"):
-        selected_question = questions[5]
-
 # =========================================================
-# DISPLAY OLD CHAT
+# OLD MESSAGES
 # =========================================================
 
 for message in st.session_state.messages:
 
-    avatar = "👤" if message["role"] == "user" else "🤖"
+    avatar = (
+        "👤"
+        if message["role"] == "user"
+        else "🤖"
+    )
 
     with st.chat_message(
         message["role"],
@@ -533,9 +532,8 @@ user_message = st.chat_input(
     "अपना सवाल लिखें... जैसे: Aadhaar card kaise banega?"
 )
 
-# Popular question clicked
-if selected_question:
-    user_message = selected_question
+if popular_question:
+    user_message = popular_question
 
 # =========================================================
 # AI RESPONSE
@@ -543,24 +541,20 @@ if selected_question:
 
 if user_message:
 
-    # Save user message
     st.session_state.messages.append({
         "role": "user",
         "content": user_message
     })
 
-    # Display user message
     with st.chat_message("user", avatar="👤"):
         st.markdown(user_message)
 
-    # AI response
     with st.chat_message("assistant", avatar="🤖"):
 
         try:
 
             response = None
 
-            # Retry up to 3 times for temporary 503 errors
             for attempt in range(3):
 
                 try:
@@ -577,22 +571,15 @@ if user_message:
 
                 except Exception as e:
 
-                    error_text = str(e)
-
-                    if "503" in error_text and attempt < 2:
-
+                    if "503" in str(e) and attempt < 2:
                         time.sleep(3)
-
                     else:
-
                         raise e
 
-            # Get AI reply
             reply = response.text
 
             st.markdown(reply)
 
-            # Save AI reply
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": reply
@@ -600,9 +587,7 @@ if user_message:
 
         except Exception as e:
 
-            error_text = str(e)
-
-            if "503" in error_text:
+            if "503" in str(e):
 
                 reply = (
                     "⚠️ Gemini server अभी busy है। "
@@ -611,7 +596,9 @@ if user_message:
 
             else:
 
-                reply = f"⚠️ AI Error: {error_text}"
+                reply = (
+                    f"⚠️ AI Error: {str(e)}"
+                )
 
             st.markdown(reply)
 
@@ -621,43 +608,25 @@ if user_message:
             })
 
 # =========================================================
-# INPUT HELP
-# =========================================================
-
-st.markdown("""
-<div style="
-    text-align:center;
-    margin-top:15px;
-    color:#66708b;
-    font-size:12px;
-">
-💡 यह AI सहायक है। महत्वपूर्ण जानकारी के लिए संबंधित
-आधिकारिक सरकारी पोर्टल पर भी पुष्टि करें।
-</div>
-""", unsafe_allow_html=True)
-
-# =========================================================
 # FOOTER
 # =========================================================
 
-st.markdown("""
-<div class="footer">
-
-    <div class="footer-main">
-        🛡️ Trusted Information &nbsp; • &nbsp;
-        CSC_HELPDESK_AI • Digital Service Assistant
-    </div>
-
-    <div class="footer-line">
+st.markdown(
+    """
+    <div class="footer">
+        🛡️ Trusted Information For A Better Tomorrow
+        <br><br>
+        <b>CSC_HELPDESK_AI</b>
+        • Digital Service Assistant
+        <br>
         🇮🇳 Digital India &nbsp; | &nbsp;
         Common Service Center &nbsp; | &nbsp;
-        Jan Seva &nbsp; | &nbsp;
-        Viksit Bharat
+        Jan Seva
+        <br><br>
+        ⚡ Fast &nbsp; | &nbsp;
+        ⚙️ Simple &nbsp; | &nbsp;
+        🛡️ Reliable
     </div>
-
-    <div class="footer-line">
-        ⚡ Fast &nbsp; | &nbsp; ⚙️ Simple &nbsp; | &nbsp; 🛡️ Reliable
-    </div>
-
-</div>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
