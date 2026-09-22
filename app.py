@@ -1,16 +1,19 @@
 import os
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import streamlit as st
 from google import genai
 
-app = Flask(__name__)
-CORS(app)
+st.set_page_config(
+    page_title="CSC_HELPDESK_AI",
+    page_icon="🤖",
+    layout="centered"
+)
 
 # Gemini API Key
 API_KEY = os.environ.get("GEMINI_API_KEY")
 
 if not API_KEY:
-    raise RuntimeError("GEMINI_API_KEY is not set")
+    st.error("GEMINI_API_KEY is not configured.")
+    st.stop()
 
 client = genai.Client(api_key=API_KEY)
 
@@ -18,7 +21,7 @@ SYSTEM_PROMPT = """
 You are CSC_HELPDESK_AI, a helpful digital assistant for CSC and
 Indian government service guidance.
 
-Your job is to help users understand:
+Help users understand:
 - Aadhaar
 - PAN Card
 - Ration Card
@@ -47,31 +50,28 @@ Rules:
 9. Be polite and helpful.
 """
 
-@app.route("/")
-def home():
-    return jsonify({
-        "status": "online",
-        "assistant": "CSC_HELPDESK_AI"
+st.title("🤖 CSC_HELPDESK_AI")
+st.caption("CSC & Government Service AI Assistant")
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+user_message = st.chat_input("अपना सवाल लिखें...")
+
+if user_message:
+    st.session_state.messages.append({
+        "role": "user",
+        "content": user_message
     })
 
+    with st.chat_message("user"):
+        st.markdown(user_message)
 
-@app.route("/chat", methods=["POST"])
-def chat():
     try:
-        data = request.get_json()
-
-        if not data or "message" not in data:
-            return jsonify({
-                "error": "Message is required"
-            }), 400
-
-        user_message = data["message"].strip()
-
-        if not user_message:
-            return jsonify({
-                "error": "Message cannot be empty"
-            }), 400
-
         response = client.models.generate_content(
             model="gemini-3.8-flash",
             contents=user_message,
@@ -80,18 +80,15 @@ def chat():
             }
         )
 
-        return jsonify({
-            "reply": response.text
-        })
+        reply = response.text
 
     except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), 500
+        reply = f"Error: {str(e)}"
 
+    with st.chat_message("assistant"):
+        st.markdown(reply)
 
-if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000))
-    )
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": reply
+    })
