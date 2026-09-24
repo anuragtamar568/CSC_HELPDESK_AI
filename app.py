@@ -384,44 +384,126 @@ if not API_KEY:
 
 client = genai.Client(api_key=API_KEY)
 
+
+# =========================================================
+# OUR SERVICE CATALOG / PRICE LIST
+# =========================================================
+# APNE ACTUAL CHARGES YAHAN EDIT KARO.
+SERVICE_CATALOG = {
+    "Aadhaar Print": {
+        "keywords": ["aadhaar print", "aadhar print", "aadhaar nikalna"],
+        "service_charge": 10,
+        "official_fee": "Official portal/rules ke according",
+        "documents": "Aadhaar number/card details",
+        "time": "5-10 minute"
+    },
+    "PAN Card Apply": {
+        "keywords": ["pan card", "pan apply", "new pan", "pan banana"],
+        "service_charge": 50,
+        "official_fee": "Portal ke according",
+        "documents": "Aadhaar + required PAN documents",
+        "time": "Application submission ke baad processing"
+    },
+    "PAN Correction": {
+        "keywords": ["pan correction", "pan me correction", "pan update"],
+        "service_charge": 50,
+        "official_fee": "Portal ke according",
+        "documents": "Required correction proof",
+        "time": "Application processing ke according"
+    },
+    "Income Certificate": {
+        "keywords": ["income certificate", "aay praman patra", "aay certificate"],
+        "service_charge": 50,
+        "official_fee": "Portal/department ke according",
+        "documents": "Required identity/address/income documents",
+        "time": "Department processing ke according"
+    },
+    "Caste Certificate": {
+        "keywords": ["caste certificate", "jati praman patra", "jati certificate"],
+        "service_charge": 50,
+        "official_fee": "Portal/department ke according",
+        "documents": "Required identity and caste-related documents",
+        "time": "Department processing ke according"
+    },
+    "Residence Certificate": {
+        "keywords": ["residence certificate", "niwas praman patra", "niwas certificate", "domicile"],
+        "service_charge": 50,
+        "official_fee": "Portal/department ke according",
+        "documents": "Required identity/address documents",
+        "time": "Department processing ke according"
+    },
+    "Online Form Filling": {
+        "keywords": ["online form", "form bharna", "online application", "form filling"],
+        "service_charge": 30,
+        "official_fee": "Portal fee, if any, is separate",
+        "documents": "Form ke according",
+        "time": "10-30 minute"
+    },
+    "Print": {
+        "keywords": ["print", "document print", "printout"],
+        "service_charge": 5,
+        "official_fee": "N/A",
+        "documents": "File/document",
+        "time": "2-5 minute"
+    },
+    "Scan": {
+        "keywords": ["scan", "document scan"],
+        "service_charge": 10,
+        "official_fee": "N/A",
+        "documents": "Original document",
+        "time": "2-5 minute"
+    },
+}
+
+SERVICE_CATALOG_TEXT = "\n".join(
+    f"- {name}: hamara charge ₹{data['service_charge']}; "
+    f"official fee: {data['official_fee']}; "
+    f"documents: {data['documents']}; time: {data['time']}; "
+    f"keywords: {', '.join(data['keywords'])}"
+    for name, data in SERVICE_CATALOG.items()
+)
+
+
 # =========================================================
 # AI PROMPT
 # =========================================================
 
-SYSTEM_PROMPT = """
-You are CSC_HELPDESK_AI.
+SYSTEM_PROMPT = f"""
+You are CSC_HELPDESK_AI, a private customer-service assistant for OUR CSC / Jan Seva / Digital Service Centre.
 
-You are a helpful assistant for CSC and Indian government
-digital services.
+Your main job is to understand the customer's work, tell them whether OUR CENTRE can help with it, and give the configured service charge.
 
-Help users with:
+IMPORTANT:
+- You represent OUR SERVICE CENTRE, not a government department.
+- Never promise government approval. Say we can help/apply/process; final approval depends on the concerned department.
+- Use ONLY SERVICE_CATALOG below for our centre's charges. Never invent a price.
+- If the requested service is not configured, say its charge is not configured and ask the customer to contact the centre.
+- Do not invent government fees, deadlines, eligibility or rules.
+- Never ask for OTP, password, UPI PIN, ATM PIN, CVV or other sensitive credentials.
+- For changing government information, advise verification on the official portal.
 
-Aadhaar
-PAN Card
-Ration Card
-PM Kisan
-Ayushman Card
-Income Certificate
-Caste Certificate
-Residence Certificate
-Birth Certificate
-Pension
-e-District
-Government forms
-CSC services
+LANGUAGE:
+Hindi question = Hindi answer.
+Hinglish question = Hinglish answer.
+English question = English answer.
 
-Rules:
+For a service/price question, prefer:
+✅ Haan, ye kaam humare yahan ho jayega.
+📌 Kaam: <service>
+💰 Hamara charge: ₹<service charge>
+🏛️ Official/Government fee: <configured value>
+📄 Zaroori documents: <configured documents>
+⏱️ Approx. time: <configured time>
 
-1. Hindi question = Hindi answer.
-2. Hinglish question = Hinglish answer.
-3. English question = English answer.
-4. Keep answers simple.
-5. Give step-by-step instructions.
-6. Never invent fees, rules or deadlines.
-7. Tell users to verify changing information on official portals.
-8. Never ask for OTP, password, PIN or sensitive credentials.
-9. Be polite.
-10. Give the direct answer first.
+Then:
+"Final approval/processing concerned government department ke rules ke according hota hai."
+
+If the user only asks whether it can be done, answer directly first.
+If the user asks only the charge, give the charge directly.
+For multiple services, list each separately.
+
+SERVICE CATALOG:
+{SERVICE_CATALOG_TEXT}
 """
 
 # =========================================================
@@ -562,20 +644,20 @@ p1, p2, p3, p4 = st.columns(4)
 popular_question = None
 
 with p1:
-    if st.button("🪪 Aadhaar kaise banega?"):
-        popular_question = "Aadhaar card kaise banega?"
+    if st.button("🪪 Aadhaar Print"):
+        popular_question = "Aadhaar print ka charge kitna hai?"
 
 with p2:
-    if st.button("💳 PAN card kaise banega?"):
-        popular_question = "PAN card kaise banega?"
+    if st.button("💳 PAN Card"):
+        popular_question = "PAN card banwane ka charge kitna hai aur kya documents lagenge?"
 
 with p3:
-    if st.button("🛍️ Ration card kaise banega?"):
-        popular_question = "Ration card kaise banega?"
+    if st.button("📜 Certificate"):
+        popular_question = "Income, caste ya residence certificate ka kaam ho jayega? Charge batao."
 
 with p4:
-    if st.button("🌱 PM Kisan registration?"):
-        popular_question = "PM Kisan registration kaise kare?"
+    if st.button("📝 Online Form"):
+        popular_question = "Online form bharne ka charge kitna hai?"
 
 st.markdown(
     '</div>',
