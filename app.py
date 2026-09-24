@@ -392,56 +392,56 @@ client = genai.Client(api_key=API_KEY)
 SERVICE_CATALOG = {
     "Aadhaar Print": {
         "keywords": ["aadhaar print", "aadhar print", "aadhaar nikalna"],
-        "service_charge": 10,
+        "service_charge": 50,
         "official_fee": "Official portal/rules ke according",
         "documents": "Aadhaar number/card details",
         "time": "5-10 minute"
     },
     "PAN Card Apply": {
         "keywords": ["pan card", "pan apply", "new pan", "pan banana"],
-        "service_charge": 50,
+        "service_charge": 350,
         "official_fee": "Portal ke according",
         "documents": "Aadhaar + required PAN documents",
         "time": "Application submission ke baad processing"
     },
     "PAN Correction": {
         "keywords": ["pan correction", "pan me correction", "pan update"],
-        "service_charge": 50,
+        "service_charge": 350,
         "official_fee": "Portal ke according",
         "documents": "Required correction proof",
         "time": "Application processing ke according"
     },
     "Income Certificate": {
         "keywords": ["income certificate", "aay praman patra", "aay certificate"],
-        "service_charge": 50,
+        "service_charge": 500,
         "official_fee": "Portal/department ke according",
         "documents": "Required identity/address/income documents",
         "time": "Department processing ke according"
     },
     "Caste Certificate": {
         "keywords": ["caste certificate", "jati praman patra", "jati certificate"],
-        "service_charge": 50,
+        "service_charge": 500,
         "official_fee": "Portal/department ke according",
         "documents": "Required identity and caste-related documents",
         "time": "Department processing ke according"
     },
     "Residence Certificate": {
         "keywords": ["residence certificate", "niwas praman patra", "niwas certificate", "domicile"],
-        "service_charge": 50,
+        "service_charge": 500,
         "official_fee": "Portal/department ke according",
         "documents": "Required identity/address documents",
         "time": "Department processing ke according"
     },
     "Online Form Filling": {
         "keywords": ["online form", "form bharna", "online application", "form filling"],
-        "service_charge": 30,
+        "service_charge": 150,
         "official_fee": "Portal fee, if any, is separate",
         "documents": "Form ke according",
         "time": "10-30 minute"
     },
     "Print": {
         "keywords": ["print", "document print", "printout"],
-        "service_charge": 5,
+        "service_charge": 5,10
         "official_fee": "N/A",
         "documents": "File/document",
         "time": "2-5 minute"
