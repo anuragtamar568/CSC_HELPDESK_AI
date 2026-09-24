@@ -441,7 +441,7 @@ SERVICE_CATALOG = {
     },
     "Print": {
         "keywords": ["print", "document print", "printout"],
-        "service_charge": 5,10
+        "service_charge": 5,
         "official_fee": "N/A",
         "documents": "File/document",
         "time": "2-5 minute"
