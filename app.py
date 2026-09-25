@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 st.set_page_config(
     page_title="CSC_HELPDESK_AI",
-    page_icon="🤖",
+    page_icon="&#129302;",
     layout="wide"
 )
 
@@ -134,6 +134,12 @@ st.markdown(
         radial-gradient(circle at 50% 100%, rgba(0, 255, 200, 0.06), transparent 35%),
         linear-gradient(135deg, #030712 0%, #050816 45%, #020617 100%);
     color: #e5f7ff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+/* Emoji-safe font stack for Windows/Android/Chrome */
+.emoji, .service-icon, .online, .section, .stButton > button, .footer {
+    font-family: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Symbol", sans-serif !important;
 }
 
 .block-container {
@@ -488,12 +494,12 @@ Hinglish question = Hinglish answer.
 English question = English answer.
 
 For a service/price question, prefer:
-✅ Haan, ye kaam humare yahan ho jayega.
-📌 Kaam: <service>
-💰 Hamara charge: ₹<service charge>
-🏛️ Official/Government fee: <configured value>
-📄 Zaroori documents: <configured documents>
-⏱️ Approx. time: <configured time>
+&#9989; Haan, ye kaam humare yahan ho jayega.
+&#128204; Kaam: <service>
+&#128176; Hamara charge: ₹<service charge>
+&#127963;&#65039; Official/Government fee: <configured value>
+&#128196; Zaroori documents: <configured documents>
+&#9201;&#65039; Approx. time: <configured time>
 
 Then:
 "Final approval/processing concerned government department ke rules ke according hota hai."
@@ -545,7 +551,7 @@ with col_title:
 
     st.markdown(
         '<div class="online">'
-        '🟢 AI Assistant Online'
+        '&#128994; AI Assistant Online'
         '</div>',
         unsafe_allow_html=True
     )
@@ -568,21 +574,21 @@ st.markdown(
 # =========================================================
 
 st.markdown(
-    '<div class="section">🛠️ CSC Services</div>',
+    '<div class="section">&#128736;&#65039; CSC Services</div>',
     unsafe_allow_html=True
 )
 
 services = [
-    ("🪪", "Aadhaar"),
-    ("💳", "PAN Card"),
-    ("🛍️", "Ration Card"),
-    ("🌱", "PM Kisan"),
-    ("🏥", "Ayushman"),
-    ("📜", "Certificates"),
-    ("👨‍👩‍👧", "Pension"),
-    ("🖥️", "e-District"),
-    ("🏛️", "CSC Services"),
-    ("•••", "More Services")
+    ("&#129450;", "Aadhaar"),
+    ("&#128179;", "PAN Card"),
+    ("&#128717;", "Ration Card"),
+    ("&#127793;", "PM Kisan"),
+    ("&#127973;", "Ayushman"),
+    ("&#128196;", "Certificates"),
+    ("&#128106;", "Pension"),
+    ("&#128187;", "e-District"),
+    ("&#127963;", "CSC Services"),
+    ("&#8226;&#8226;&#8226;", "More Services")
 ]
 
 columns = st.columns(10)
@@ -594,7 +600,7 @@ for col, item in zip(columns, services):
         st.markdown(
             f"""
             <div class="service-card">
-                <div class="service-icon">{item[0]}</div>
+                <div class="service-icon emoji">{item[0]}</div>
                 <div class="service-name">{item[1]}</div>
             </div>
             """,
@@ -611,14 +617,14 @@ c1, c2, c3 = st.columns([7, 1.5, 1.5])
 
 with c2:
 
-    if st.button("🔄 New Chat"):
+    if st.button("↻ New Chat"):
 
         st.session_state.messages = []
         st.rerun()
 
 with c3:
 
-    if st.button("🕘 History"):
+    if st.button("◷ History"):
 
         st.info(
             f"Current chat में "
@@ -630,7 +636,7 @@ with c3:
 # =========================================================
 
 st.markdown(
-    '<div class="section">💡 Popular Questions</div>',
+    '<div class="section">&#128161; Popular Questions</div>',
     unsafe_allow_html=True
 )
 
@@ -644,19 +650,19 @@ p1, p2, p3, p4 = st.columns(4)
 popular_question = None
 
 with p1:
-    if st.button("🪪 Aadhaar Print"):
+    if st.button("▣ Aadhaar Print"):
         popular_question = "Aadhaar print ka charge kitna hai?"
 
 with p2:
-    if st.button("💳 PAN Card"):
+    if st.button("▣ PAN Card"):
         popular_question = "PAN card banwane ka charge kitna hai aur kya documents lagenge?"
 
 with p3:
-    if st.button("📜 Certificate"):
+    if st.button("▤ Certificate"):
         popular_question = "Income, caste ya residence certificate ka kaam ho jayega? Charge batao."
 
 with p4:
-    if st.button("📝 Online Form"):
+    if st.button("✎ Online Form"):
         popular_question = "Online form bharne ka charge kitna hai?"
 
 st.markdown(
@@ -671,9 +677,9 @@ st.markdown(
 for message in st.session_state.messages:
 
     avatar = (
-        "👤"
+        "U"
         if message["role"] == "user"
-        else "🤖"
+        else "AI"
     )
 
     with st.chat_message(
@@ -704,10 +710,10 @@ if user_message:
         "content": user_message
     })
 
-    with st.chat_message("user", avatar="👤"):
+    with st.chat_message("user", avatar="U"):
         st.markdown(user_message)
 
-    with st.chat_message("assistant", avatar="🤖"):
+    with st.chat_message("assistant", avatar="&#129302;"):
 
         try:
 
@@ -747,11 +753,11 @@ if user_message:
 
             # Customer ko technical/server details nahi dikhani hain.
             reply = (
-                "🙏 मैं अभी थोड़ा व्यस्त हूँ।\n\n"
+                "&#128591; मैं अभी थोड़ा व्यस्त हूँ।\n\n"
                 "कृपया हमारे Owner **Vicky Choudhary Ji** से बात कर लीजिए "
                 "और आवश्यक जानकारी ले लीजिए।\n\n"
-                "📞 Mobile No.: **8826066468**\n\n"
-                "धन्यवाद 🙏\n"
+                "&#128222; Mobile No.: **8826066468**\n\n"
+                "धन्यवाद &#128591;\n"
                 "आपका दिन शुभ हो।"
             )
 
@@ -770,18 +776,18 @@ if user_message:
 st.markdown(
     """
     <div class="footer">
-        🛡️ Trusted Information For A Better Tomorrow
+        &#128737;&#65039; Trusted Information For A Better Tomorrow
         <br><br>
         <b>CSC_HELPDESK_AI</b>
         • Digital Service Assistant
         <br>
-        🇮🇳 Digital India &nbsp; | &nbsp;
+        &#127470;&#127475; Digital India &nbsp; | &nbsp;
         Common Service Center &nbsp; | &nbsp;
         Jan Seva
         <br><br>
-        ⚡ Fast &nbsp; | &nbsp;
-        ⚙️ Simple &nbsp; | &nbsp;
-        🛡️ Reliable
+        &#9889; Fast &nbsp; | &nbsp;
+        &#9881;&#65039; Simple &nbsp; | &nbsp;
+        &#128737;&#65039; Reliable
     </div>
     """,
     unsafe_allow_html=True
