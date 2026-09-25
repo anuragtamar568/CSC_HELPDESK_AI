@@ -729,34 +729,14 @@ if user_message:
 
                 except Exception as e:
 
-                    if "503" in str(e) and attempt < 2:
-                        time.sleep(3)
-                    else:
-                        raise e
-
-            reply = response.text
-
-            st.markdown(reply)
-
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": reply
-            })
-
-        except Exception as e:
-
-            if "503" in str(e):
-
-                reply = (
-                    "⚠️ Gemini server अभी busy है। "
-                    "कुछ सेकंड बाद फिर से कोशिश करें।"
-                )
-
-            else:
-
-                reply = (
-                    f"⚠️ AI Error: {str(e)}"
-                )
+            reply = (
+                "🙏 मैं अभी थोड़ा व्यस्त हूँ।\n\n"
+                "कृपया हमारे Owner **Vicky Choudhary Ji** से बात कर लीजिए "
+                "और आवश्यक जानकारी ले लीजिए।\n\n"
+                "📞 Mobile No.: **8826066468**\n\n"
+                "धन्यवाद 🙏\n"
+                "आपका दिन शुभ हो।"
+            )
 
             st.markdown(reply)
 
@@ -764,6 +744,7 @@ if user_message:
                 "role": "assistant",
                 "content": reply
             })
+
 
 # =========================================================
 # FOOTER
