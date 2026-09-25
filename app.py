@@ -119,6 +119,14 @@ def create_robot_logo():
 
 logo = create_robot_logo()
 
+# Browser-safe emoji icons. These are images, so they do not depend on
+# the emoji font installed on the Streamlit Cloud machine.
+def emoji_img(code, size=30):
+    return (
+        f'<img class="emoji-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{code}.svg" '
+        f'width="{size}" height="{size}" alt="emoji" />'
+    )
+
 # =========================================================
 # PREMIUM DARK CINEMATIC CSS
 # =========================================================
@@ -138,8 +146,16 @@ st.markdown(
 }
 
 /* Emoji-safe font stack for Windows/Android/Chrome */
+.emoji-img {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    display: inline-block;
+    object-fit: contain;
+}
+
 .emoji, .service-icon, .online, .section, .stButton > button, .footer {
-    font-family: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Symbol", sans-serif !important;
+    font-family: "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", "Twemoji Mozilla", sans-serif !important;
 }
 
 .block-container {
@@ -574,21 +590,21 @@ st.markdown(
 # =========================================================
 
 st.markdown(
-    '<div class="section">&#128736;&#65039; CSC Services</div>',
+    f'<div class="section">{emoji_img("1f6e0", 28)} CSC Services</div>',
     unsafe_allow_html=True
 )
 
 services = [
-    ("&#129450;", "Aadhaar"),
-    ("&#128179;", "PAN Card"),
-    ("&#128717;", "Ration Card"),
-    ("&#127793;", "PM Kisan"),
-    ("&#127973;", "Ayushman"),
-    ("&#128196;", "Certificates"),
-    ("&#128106;", "Pension"),
-    ("&#128187;", "e-District"),
-    ("&#127963;", "CSC Services"),
-    ("&#8226;&#8226;&#8226;", "More Services")
+    ("1f4c4", "Aadhaar"),
+    ("1f4b3", "PAN Card"),
+    ("1f4e6", "Ration Card"),
+    ("1f331", "PM Kisan"),
+    ("1f3e5", "Ayushman"),
+    ("1f4cb", "Certificates"),
+    ("1f464", "Pension"),
+    ("1f4bb", "e-District"),
+    ("1f3e2", "CSC Services"),
+    ("", "More Services")
 ]
 
 columns = st.columns(10)
@@ -600,7 +616,7 @@ for col, item in zip(columns, services):
         st.markdown(
             f"""
             <div class="service-card">
-                <div class="service-icon emoji">{item[0]}</div>
+                <div class="service-icon">{emoji_img(item[0], 34) if item[0] else "•••"}</div>
                 <div class="service-name">{item[1]}</div>
             </div>
             """,
@@ -636,7 +652,7 @@ with c3:
 # =========================================================
 
 st.markdown(
-    '<div class="section">&#128161; Popular Questions</div>',
+    f'<div class="section">{emoji_img("1f4a1", 28)} Popular Questions</div>',
     unsafe_allow_html=True
 )
 
@@ -676,16 +692,7 @@ st.markdown(
 
 for message in st.session_state.messages:
 
-    avatar = (
-        "U"
-        if message["role"] == "user"
-        else "AI"
-    )
-
-    with st.chat_message(
-        message["role"],
-        avatar=avatar
-    ):
+    with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # =========================================================
@@ -710,10 +717,10 @@ if user_message:
         "content": user_message
     })
 
-    with st.chat_message("user", avatar="U"):
+    with st.chat_message("user"):
         st.markdown(user_message)
 
-    with st.chat_message("assistant", avatar="&#129302;"):
+    with st.chat_message("assistant"):
 
         try:
 
@@ -753,11 +760,11 @@ if user_message:
 
             # Customer ko technical/server details nahi dikhani hain.
             reply = (
-                "&#128591; मैं अभी थोड़ा व्यस्त हूँ।\n\n"
+                f'{emoji_img("1f64f", 22)} **मैं अभी थोड़ा व्यस्त हूँ।**\n\n'
                 "कृपया हमारे Owner **Vicky Choudhary Ji** से बात कर लीजिए "
                 "और आवश्यक जानकारी ले लीजिए।\n\n"
-                "&#128222; Mobile No.: **8826066468**\n\n"
-                "धन्यवाद &#128591;\n"
+                f'{emoji_img("1f4de", 22)} **Mobile No.: 8826066468**\n\n'
+                f'धन्यवाद {emoji_img("1f64f", 22)}\n'
                 "आपका दिन शुभ हो।"
             )
 
