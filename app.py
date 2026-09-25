@@ -119,13 +119,28 @@ def create_robot_logo():
 
 logo = create_robot_logo()
 
-# Browser-safe emoji icons. These are images, so they do not depend on
-# the emoji font installed on the Streamlit Cloud machine.
-def emoji_img(code, size=30):
-    return (
-        f'<img class="emoji-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/{code}.svg" '
-        f'width="{size}" height="{size}" alt="emoji" />'
-    )
+# =========================================================
+# SAFE INLINE ICONS
+# =========================================================
+# No external emoji images: inline SVGs avoid square-box/font problems.
+def icon_svg(code, size=30):
+    labels = {
+        "1f6e0": ("⚙", "#61dafb"), "1f4c4": ("A", "#00e5ff"),
+        "1f4b3": ("P", "#a78bfa"), "1f4e6": ("R", "#f59e0b"),
+        "1f331": ("K", "#4ade80"), "1f3e5": ("H", "#fb7185"),
+        "1f4cb": ("C", "#22d3ee"), "1f464": ("P", "#fbbf24"),
+        "1f4bb": ("E", "#60a5fa"), "1f3e2": ("C", "#c084fc"),
+        "1f4a1": ("?", "#facc15"), "1f64f": ("✓", "#4ade80"),
+        "1f4de": ("☎", "#38bdf8"),
+    }
+    label, accent = labels.get(code, ("•", "#67e8f9"))
+    return f"""<span class="svg-icon" style="width:{size}px;height:{size}px;">
+<svg viewBox="0 0 64 64" width="{size}" height="{size}" aria-hidden="true">
+<defs><linearGradient id="g{code}{size}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="{accent}"/></linearGradient></defs>
+<circle cx="32" cy="32" r="29" fill="rgba(4,15,30,.92)" stroke="url(#g{code}{size})" stroke-width="2.5"/>
+<circle cx="32" cy="32" r="22" fill="none" stroke="{accent}" stroke-opacity=".22"/>
+<text x="32" y="40" text-anchor="middle" font-size="25" font-family="Arial,sans-serif" font-weight="800" fill="white">{label}</text>
+</svg></span>"""
 
 # =========================================================
 # PREMIUM DARK CINEMATIC CSS
@@ -134,261 +149,45 @@ def emoji_img(code, size=30):
 st.markdown(
     """
 <style>
-
-.stApp {
-    background:
-        radial-gradient(circle at 15% 10%, rgba(0, 183, 255, 0.14), transparent 25%),
-        radial-gradient(circle at 85% 15%, rgba(79, 70, 229, 0.14), transparent 28%),
-        radial-gradient(circle at 50% 100%, rgba(0, 255, 200, 0.06), transparent 35%),
-        linear-gradient(135deg, #030712 0%, #050816 45%, #020617 100%);
-    color: #e5f7ff;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-}
-
-/* Emoji-safe font stack for Windows/Android/Chrome */
-.emoji-img {
-    width: 1em;
-    height: 1em;
-    vertical-align: -0.15em;
-    display: inline-block;
-    object-fit: contain;
-}
-
-.emoji, .service-icon, .online, .section, .stButton > button, .footer {
-    font-family: "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", "Twemoji Mozilla", sans-serif !important;
-}
-
-.block-container {
-    max-width: 1350px;
-    padding-top: 25px;
-    padding-bottom: 60px;
-}
-
-.hero-box {
-    position: relative;
-    text-align: center;
-    padding: 30px 25px;
-    border-radius: 30px;
-    background: linear-gradient(135deg, rgba(10, 25, 45, 0.88), rgba(5, 12, 28, 0.82));
-    border: 1px solid rgba(0, 200, 255, 0.25);
-    box-shadow: 0 0 40px rgba(0, 180, 255, 0.08), inset 0 0 30px rgba(0, 150, 255, 0.035);
-    backdrop-filter: blur(18px);
-}
-
-.hero-box::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 12%;
-    width: 76%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #00d9ff, #6d5dfc, #00d9ff, transparent);
-    box-shadow: 0 0 15px #00d9ff, 0 0 30px rgba(0, 217, 255, 0.5);
-    border-radius: 10px;
-}
-
-.title {
-    font-size: 48px;
-    font-weight: 900;
-    letter-spacing: 2px;
-    background: linear-gradient(90deg, #ffffff, #5ee7ff, #00c8ff, #7c6cff, #ffffff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 25px rgba(0, 200, 255, 0.25);
-}
-
-.subtitle {
-    color: #9fc8d8;
-    font-size: 18px;
-    margin-top: 5px;
-}
-
-.online {
-    display: inline-block;
-    margin-top: 15px;
-    padding: 8px 20px;
-    border-radius: 30px;
-    color: #5dffcb;
-    background: rgba(0, 255, 180, 0.07);
-    border: 1px solid rgba(0, 255, 180, 0.35);
-    font-weight: 700;
-    box-shadow: 0 0 18px rgba(0, 255, 180, 0.08);
-}
-
-.tagline {
-    margin-top: 14px;
-    color: #6f91a1;
-    font-size: 14px;
-}
-
-.section {
-    font-size: 23px;
-    font-weight: 800;
-    color: #d9f8ff;
-    margin-top: 30px;
-    margin-bottom: 15px;
-    letter-spacing: 0.3px;
-    text-shadow: 0 0 15px rgba(0, 200, 255, 0.18);
-}
-
-.service-card {
-    position: relative;
-    text-align: center;
-    padding: 20px 7px;
-    min-height: 110px;
-    border-radius: 20px;
-    background: linear-gradient(145deg, rgba(12, 30, 50, 0.88), rgba(4, 14, 28, 0.92));
-    border: 1px solid rgba(0, 190, 255, 0.16);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35), inset 0 0 20px rgba(0, 160, 255, 0.025);
-    transition: all 0.25s ease;
-}
-
-.service-card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(0, 210, 255, 0.5);
-    box-shadow: 0 0 25px rgba(0, 190, 255, 0.12), 0 12px 30px rgba(0, 0, 0, 0.45);
-}
-
-.service-icon {
-    font-size: 34px;
-    filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.3));
-}
-
-.service-name {
-    color: #b9dbe6;
-    font-size: 13px;
-    font-weight: 700;
-    margin-top: 8px;
-}
-
-.popular {
-    padding: 20px;
-    border-radius: 24px;
-    background: linear-gradient(145deg, rgba(10, 27, 45, 0.82), rgba(3, 12, 25, 0.88));
-    border: 1px solid rgba(0, 190, 255, 0.15);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(15px);
-}
-
-.stButton > button {
-    width: 100%;
-    min-height: 42px;
-    border-radius: 14px;
-    border: 1px solid rgba(0, 200, 255, 0.25);
-    background: linear-gradient(135deg, rgba(8, 28, 48, 0.95), rgba(5, 17, 32, 0.95));
-    color: #c9f5ff;
-    font-weight: 700;
-    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.25);
-    transition: all 0.25s ease;
-}
-
-.stButton > button:hover {
-    border-color: #00d9ff;
-    color: #ffffff;
-    background: linear-gradient(135deg, rgba(0, 150, 220, 0.18), rgba(70, 80, 255, 0.15));
-    box-shadow: 0 0 18px rgba(0, 210, 255, 0.18);
-    transform: translateY(-2px);
-}
-
-[data-testid="stChatMessage"] {
-    background: rgba(5, 18, 32, 0.55);
-    border: 1px solid rgba(0, 190, 255, 0.08);
-    border-radius: 18px;
-    margin-bottom: 10px;
-    padding: 8px 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.18);
-}
-
-[data-testid="stChatInput"] {
-    background: rgba(3, 12, 24, 0.85);
-    border-radius: 22px;
-    box-shadow: 0 0 25px rgba(0, 170, 255, 0.06);
-}
-
-[data-testid="stChatInput"] textarea {
-    background: #071321 !important;
-    color: #e8faff !important;
-    border: 2px solid rgba(0, 200, 255, 0.35) !important;
-    border-radius: 20px !important;
-    font-size: 16px !important;
-    caret-color: #00d9ff !important;
-}
-
-[data-testid="stChatInput"] textarea:focus {
-    border: 2px solid #00d9ff !important;
-    box-shadow: 0 0 18px rgba(0, 217, 255, 0.15) !important;
-}
-
-[data-testid="stChatMessage"] p {
-    color: #d7edf5;
-}
-
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #020812, #030b16, #020611);
-    border-right: 1px solid rgba(0, 200, 255, 0.12);
-}
-
-hr {
-    border: none;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.25), transparent);
-}
-
-.footer {
-    text-align: center;
-    margin-top: 45px;
-    padding: 25px;
-    color: #668392;
-    font-size: 13px;
-    border-top: 1px solid rgba(0, 190, 255, 0.08);
-}
-
-.stMarkdown {
-    color: #d7edf5;
-}
-
-::-webkit-scrollbar {
-    width: 7px;
-}
-
-::-webkit-scrollbar-track {
-    background: #020611;
-}
-
-::-webkit-scrollbar-thumb {
-    background: linear-gradient(#00bfe7, #5d5cff);
-    border-radius: 10px;
-}
-
-@media(max-width: 700px) {
-    .block-container {
-        padding-left: 12px;
-        padding-right: 12px;
-    }
-
-    .title {
-        font-size: 30px;
-        letter-spacing: 1px;
-    }
-
-    .subtitle {
-        font-size: 14px;
-    }
-
-    .hero-box {
-        padding: 20px 12px;
-        border-radius: 22px;
-    }
-
-    .service-card {
-        min-height: 95px;
-    }
-
-    .service-icon {
-        font-size: 27px;
-    }
-}
-
+:root { --cyan:#00e5ff; --purple:#a855f7; --pink:#ec4899; --green:#39ff88; --text:#eaf8ff; }
+.stApp { min-height:100vh; color:var(--text); background:radial-gradient(circle at 8% 8%,rgba(0,229,255,.16),transparent 24%),radial-gradient(circle at 92% 12%,rgba(168,85,247,.18),transparent 25%),radial-gradient(circle at 50% 105%,rgba(236,72,153,.10),transparent 30%),linear-gradient(135deg,#02040b 0%,#050816 42%,#080414 100%); font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif; }
+.stApp::before { content:""; position:fixed; inset:0; pointer-events:none; background:linear-gradient(115deg,transparent,rgba(0,229,255,.025),rgba(168,85,247,.025),transparent); animation:sweep 10s ease-in-out infinite alternate; }
+@keyframes sweep { from{transform:translateX(-8%)} to{transform:translateX(8%)} }
+@keyframes pulseGlow { 0%,100%{box-shadow:0 0 10px rgba(0,229,255,.15)} 50%{box-shadow:0 0 28px rgba(0,229,255,.30)} }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+@keyframes gradientText { to{background-position:250% center} }
+.block-container { max-width:1400px; padding-top:24px; padding-bottom:55px; }
+.hero-box { position:relative; overflow:hidden; text-align:center; padding:30px 25px 26px; border-radius:32px; background:linear-gradient(135deg,rgba(8,18,35,.82),rgba(10,5,25,.78)); border:1px solid rgba(0,229,255,.20); box-shadow:0 25px 80px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(22px); }
+.hero-box::before { content:""; position:absolute; top:0; left:8%; width:84%; height:2px; background:linear-gradient(90deg,transparent,var(--cyan),var(--purple),var(--pink),transparent); box-shadow:0 0 20px var(--cyan),0 0 40px rgba(168,85,247,.45); }
+.hero-box::after { content:""; position:absolute; width:220px; height:220px; border-radius:50%; right:-110px; top:-130px; background:rgba(168,85,247,.14); filter:blur(30px); }
+.title { font-size:clamp(34px,5vw,58px); font-weight:950; letter-spacing:3px; background:linear-gradient(90deg,#fff,var(--cyan),#fff,var(--purple),#fff); background-size:250% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:gradientText 5s linear infinite; text-shadow:0 0 30px rgba(0,229,255,.22); }
+.subtitle { color:#b5d8e8; font-size:17px; margin-top:7px; }
+.online { display:inline-flex; align-items:center; gap:8px; margin-top:15px; padding:8px 18px; border-radius:999px; color:#6dffb1; background:rgba(57,255,136,.06); border:1px solid rgba(57,255,136,.30); font-weight:800; animation:pulseGlow 3s ease-in-out infinite; }
+.tagline { margin-top:13px; color:#718b9b; font-size:13px; letter-spacing:.4px; }
+.section { display:flex; align-items:center; gap:10px; font-size:23px; font-weight:900; color:#f0fbff; margin-top:30px; margin-bottom:15px; letter-spacing:.2px; text-shadow:0 0 20px rgba(0,229,255,.22); }
+.svg-icon { display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; flex:none; }
+.service-card { position:relative; overflow:hidden; text-align:center; padding:17px 6px; min-height:108px; border-radius:22px; background:linear-gradient(145deg,rgba(11,29,49,.82),rgba(8,8,22,.88)); border:1px solid rgba(0,229,255,.14); box-shadow:0 12px 35px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.04); transition:.28s ease; backdrop-filter:blur(16px); }
+.service-card::after { content:""; position:absolute; left:10%; right:10%; bottom:-20px; height:35px; background:rgba(0,229,255,.12); filter:blur(22px); }
+.service-card:hover { transform:translateY(-7px) scale(1.025); border-color:rgba(0,229,255,.60); box-shadow:0 0 30px rgba(0,229,255,.16),0 18px 40px rgba(0,0,0,.45); }
+.service-icon { display:flex; justify-content:center; animation:float 4s ease-in-out infinite; }
+.service-name { color:#c9e5ef; font-size:12px; font-weight:800; margin-top:9px; letter-spacing:.2px; }
+.popular { padding:18px; border-radius:25px; background:linear-gradient(145deg,rgba(11,22,42,.76),rgba(10,5,24,.78)); border:1px solid rgba(168,85,247,.18); box-shadow:0 18px 50px rgba(0,0,0,.35); backdrop-filter:blur(18px); }
+.stButton > button { width:100%; min-height:42px; border-radius:14px; border:1px solid rgba(0,229,255,.24); background:linear-gradient(135deg,rgba(8,31,50,.92),rgba(18,8,38,.92)); color:#d9f8ff; font-weight:800; box-shadow:0 7px 20px rgba(0,0,0,.28); transition:.22s ease; }
+.stButton > button:hover { border-color:var(--cyan); color:#fff; transform:translateY(-2px); box-shadow:0 0 24px rgba(0,229,255,.20); }
+[data-testid="stChatMessage"] { background:linear-gradient(135deg,rgba(7,20,36,.72),rgba(14,7,28,.68)); border:1px solid rgba(0,229,255,.10); border-radius:20px; margin-bottom:12px; padding:10px 14px; box-shadow:0 10px 30px rgba(0,0,0,.20); backdrop-filter:blur(14px); }
+[data-testid="stChatMessage"] p { color:#d9edf5; line-height:1.65; }
+[data-testid="stChatInput"] { background:rgba(3,8,20,.86); border-radius:24px; box-shadow:0 0 35px rgba(0,229,255,.07); }
+[data-testid="stChatInput"] textarea { background:#071321 !important; color:#e8faff !important; border:2px solid rgba(0,229,255,.28) !important; border-radius:20px !important; font-size:16px !important; caret-color:var(--cyan) !important; }
+[data-testid="stChatInput"] textarea:focus { border-color:var(--cyan) !important; box-shadow:0 0 22px rgba(0,229,255,.16) !important; }
+.error-card { display:flex; gap:14px; align-items:flex-start; padding:18px 20px; margin:2px 0 5px; border-radius:18px; background:linear-gradient(135deg,rgba(10,30,38,.92),rgba(14,8,28,.92)); border:1px solid rgba(57,255,136,.25); box-shadow:0 0 28px rgba(57,255,136,.07),inset 0 1px 0 rgba(255,255,255,.05); }
+.error-card .big { font-size:16px; font-weight:850; color:#f2ffff; }
+.error-card .small { color:#a8c3ce; margin-top:5px; line-height:1.55; }
+.error-card .phone { color:#69e7ff; font-weight:900; font-size:18px; margin-top:8px; }
+section[data-testid="stSidebar"] { background:linear-gradient(180deg,#020611,#080416,#02030a); border-right:1px solid rgba(0,229,255,.12); }
+.footer { text-align:center; margin-top:48px; padding:26px; color:#668392; font-size:12px; border-top:1px solid rgba(0,229,255,.08); }
+.stMarkdown { color:#d7edf5; }
+::-webkit-scrollbar { width:7px; } ::-webkit-scrollbar-track { background:#02040a; } ::-webkit-scrollbar-thumb { background:linear-gradient(var(--cyan),var(--purple)); border-radius:10px; }
+@media(max-width:700px) { .block-container{padding-left:12px;padding-right:12px}.title{font-size:30px}.hero-box{padding:20px 12px;border-radius:22px}.service-card{min-height:95px}.service-name{font-size:11px} }
 </style>
 """,
     unsafe_allow_html=True
@@ -590,7 +389,7 @@ st.markdown(
 # =========================================================
 
 st.markdown(
-    f'<div class="section">{emoji_img("1f6e0", 28)} CSC Services</div>',
+    f'<div class="section">{icon_svg("1f6e0", 28)} CSC Services</div>',
     unsafe_allow_html=True
 )
 
@@ -616,7 +415,7 @@ for col, item in zip(columns, services):
         st.markdown(
             f"""
             <div class="service-card">
-                <div class="service-icon">{emoji_img(item[0], 34) if item[0] else "•••"}</div>
+                <div class="service-icon">{icon_svg(item[0], 34) if item[0] else "•••"}</div>
                 <div class="service-name">{item[1]}</div>
             </div>
             """,
@@ -652,7 +451,7 @@ with c3:
 # =========================================================
 
 st.markdown(
-    f'<div class="section">{emoji_img("1f4a1", 28)} Popular Questions</div>',
+    f'<div class="section">{icon_svg("1f4a1", 28)} Popular Questions</div>',
     unsafe_allow_html=True
 )
 
@@ -760,15 +559,22 @@ if user_message:
 
             # Customer ko technical/server details nahi dikhani hain.
             reply = (
-                f'{emoji_img("1f64f", 22)} **मैं अभी थोड़ा व्यस्त हूँ।**\n\n'
-                "कृपया हमारे Owner **Vicky Choudhary Ji** से बात कर लीजिए "
-                "और आवश्यक जानकारी ले लीजिए।\n\n"
-                f'{emoji_img("1f4de", 22)} **Mobile No.: 8826066468**\n\n'
-                f'धन्यवाद {emoji_img("1f64f", 22)}\n'
-                "आपका दिन शुभ हो।"
+                "मैं अभी थोड़ा व्यस्त हूँ। कृपया हमारे Owner Vicky Choudhary Ji से बात कर लीजिए और आवश्यक जानकारी ले लीजिए। "
+                "Mobile No.: 8826066468. धन्यवाद, आपका दिन शुभ हो।"
             )
 
-            st.markdown(reply)
+            st.markdown(
+                f'''<div class="error-card">
+                    {icon_svg("1f64f", 42)}
+                    <div>
+                        <div class="big">मैं अभी थोड़ा व्यस्त हूँ।</div>
+                        <div class="small">कृपया हमारे Owner <b>Vicky Choudhary Ji</b> से बात कर लीजिए और आवश्यक जानकारी ले लीजिए।</div>
+                        <div class="phone">☎ &nbsp;8826066468</div>
+                        <div class="small">धन्यवाद • आपका दिन शुभ हो।</div>
+                    </div>
+                </div>''',
+                unsafe_allow_html=True
+            )
 
             st.session_state.messages.append({
                 "role": "assistant",
