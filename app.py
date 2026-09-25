@@ -729,6 +729,23 @@ if user_message:
 
                 except Exception as e:
 
+                    if "503" in str(e) and attempt < 2:
+                        time.sleep(3)
+                    else:
+                        raise e
+
+            reply = response.text
+
+            st.markdown(reply)
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": reply
+            })
+
+        except Exception as e:
+
+            # Customer ko technical/server details nahi dikhani hain.
             reply = (
                 "🙏 मैं अभी थोड़ा व्यस्त हूँ।\n\n"
                 "कृपया हमारे Owner **Vicky Choudhary Ji** से बात कर लीजिए "
