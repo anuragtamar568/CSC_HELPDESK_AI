@@ -2,22 +2,21 @@ import os
 import time
 import streamlit as st
 from google import genai
-from PIL import Image, ImageDraw, ImageFilter
 
 # =========================================================
 # PAGE
 # =========================================================
 st.set_page_config(
-    page_title="CSC_HELPDESK_AI",
-    page_icon="🤖",
+    page_title="CSC Helpdesk AI",
+    page_icon="C",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 # =========================================================
-# LOGIN CONFIG
+# LOGIN SETTINGS
 # =========================================================
-# YAHAN LOGIN DETAILS CHANGE KAR SAKTE HO
+# CHANGE THESE IF YOU WANT
 DEFAULT_USERNAME = "admin"
 DEFAULT_PASSWORD = "12345"
 
@@ -27,391 +26,434 @@ PASSWORD = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 
 # =========================================================
-# PREMIUM LOGIN CSS
+# GLOBAL CSS
 # =========================================================
-LOGIN_CSS = """
+GLOBAL_CSS = r"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* ---------- RESET / BASE ---------- */
+html, body, [class*="css"] {
+    font-family: Inter, Arial, Helvetica, sans-serif !important;
+}
 
 .stApp {
+    background: #07090c !important;
+    color: #f5f5f5 !important;
+}
+
+[data-testid="stAppViewContainer"] {
     background:
-        radial-gradient(circle at 50% -10%, rgba(255,180,70,.14), transparent 30%),
-        radial-gradient(circle at 0% 100%, rgba(255,110,30,.08), transparent 30%),
-        #07090d;
-    font-family: Inter, sans-serif;
+        radial-gradient(circle at 85% 5%, rgba(246,166,35,.08), transparent 25%),
+        radial-gradient(circle at 5% 80%, rgba(246,166,35,.045), transparent 25%),
+        #07090c !important;
 }
 
 [data-testid="stHeader"] {
-    background: transparent;
+    background: transparent !important;
+}
+
+[data-testid="stToolbar"] {
+    background: transparent !important;
 }
 
 .block-container {
-    max-width: 100%;
-    padding: 0;
+    max-width: 1220px !important;
+    padding-top: 28px !important;
+    padding-bottom: 60px !important;
 }
 
-.login-wrap {
-    min-height: 92vh;
+/* ---------- LOGIN ---------- */
+.login-page {
+    min-height: 88vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 30px 18px;
 }
 
 .login-card {
-    width: min(430px, 100%);
-    padding: 38px 34px 32px;
-    border-radius: 28px;
-    background: rgba(17,20,26,.94);
-    border: 1px solid rgba(255,255,255,.09);
-    box-shadow:
-        0 35px 100px rgba(0,0,0,.65),
-        0 0 70px rgba(255,150,50,.07),
-        inset 0 1px 0 rgba(255,255,255,.05);
+    width: 410px;
+    max-width: 94vw;
+    padding: 42px 38px 34px;
+    background: #101319;
+    border: 1px solid #252b34;
+    border-radius: 24px;
+    box-shadow: 0 35px 90px rgba(0,0,0,.60);
 }
 
-.login-logo {
-    width: 74px;
-    height: 74px;
-    margin: 0 auto 18px;
-    border-radius: 22px;
+.login-mark {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 20px;
+    border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
-    background: linear-gradient(145deg,#ffb84d,#ff6b1a);
-    box-shadow: 0 12px 35px rgba(255,120,30,.25);
+    background: linear-gradient(145deg, #ffc15a, #f47a18);
+    color: #111;
+    font-size: 28px;
+    font-weight: 900;
+    box-shadow: 0 12px 35px rgba(244,122,24,.22);
 }
 
 .login-title {
     text-align: center;
-    color: #fff;
-    font-size: 29px;
+    color: #ffffff;
+    font-size: 28px;
     font-weight: 800;
     letter-spacing: -.8px;
 }
 
 .login-subtitle {
     text-align: center;
-    color: #89919e;
+    color: #858d99;
     font-size: 13px;
-    margin: 7px 0 28px;
+    margin-top: 7px;
+    margin-bottom: 28px;
 }
 
 .login-label {
-    color: #c8ced8;
-    font-size: 13px;
-    font-weight: 600;
-    margin: 0 0 7px;
+    color: #cbd1d9;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 13px 0 7px;
 }
 
+.login-info {
+    text-align: center;
+    color: #606975;
+    font-size: 11px;
+    margin-top: 18px;
+}
+
+/* ---------- INPUTS ---------- */
 .stTextInput > div > div > input {
-    background: #0c0f14 !important;
-    color: #fff !important;
-    border: 1px solid #252b35 !important;
-    border-radius: 13px !important;
-    min-height: 48px !important;
+    height: 48px !important;
+    background: #0a0d11 !important;
+    color: #ffffff !important;
+    border: 1px solid #2a3039 !important;
+    border-radius: 12px !important;
+    padding: 0 14px !important;
 }
 
 .stTextInput > div > div > input:focus {
-    border-color: #ff9d3d !important;
-    box-shadow: 0 0 0 1px #ff9d3d !important;
+    border-color: #f3a437 !important;
+    box-shadow: 0 0 0 1px #f3a437 !important;
 }
 
-.login-btn button {
-    width: 100%;
-    min-height: 49px;
-    border: 0 !important;
-    border-radius: 13px !important;
-    background: linear-gradient(135deg,#ffb84d,#ff6b1a) !important;
-    color: #15100a !important;
-    font-weight: 800 !important;
-    box-shadow: 0 12px 30px rgba(255,110,20,.18);
+.stTextInput label {
+    display: none !important;
 }
 
-.login-note {
-    text-align: center;
-    color: #626b78;
-    font-size: 11px;
-    margin-top: 20px;
-}
-</style>
-"""
-
-# =========================================================
-# MAIN APP CSS
-# =========================================================
-APP_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-:root {
-    --bg: #07090d;
-    --panel: #101319;
-    --panel2: #0c0f14;
-    --border: #202630;
-    --orange: #ff9d3d;
-    --orange2: #ff6b1a;
-    --text: #f4f6f8;
-    --muted: #8d96a3;
+/* ---------- ALL BUTTONS ---------- */
+.stButton > button {
+    width: 100% !important;
+    min-height: 43px !important;
+    border-radius: 11px !important;
+    background: #12161c !important;
+    border: 1px solid #2a313b !important;
+    color: #e5e8ed !important;
+    font-weight: 700 !important;
+    transition: all .18s ease !important;
 }
 
-.stApp {
-    min-height: 100vh;
-    background:
-        radial-gradient(circle at 80% 0%, rgba(255,153,61,.08), transparent 24%),
-        radial-gradient(circle at 0% 70%, rgba(255,107,26,.05), transparent 25%),
-        var(--bg);
-    color: var(--text);
-    font-family: Inter, sans-serif;
+.stButton > button:hover {
+    border-color: #f3a437 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    background: #171b21 !important;
 }
 
-[data-testid="stHeader"] {
-    background: transparent;
+.login-button .stButton > button {
+    background: linear-gradient(135deg, #ffc15a, #f47a18) !important;
+    border: none !important;
+    color: #17120b !important;
+    min-height: 49px !important;
+    font-size: 14px !important;
+    box-shadow: 0 12px 28px rgba(244,122,24,.18) !important;
 }
 
-.block-container {
-    max-width: 1280px;
-    padding-top: 28px;
-    padding-bottom: 55px;
+.login-button .stButton > button:hover {
+    background: linear-gradient(135deg, #ffd078, #ff8730) !important;
+    color: #17120b !important;
 }
 
-.app-top {
+/* ---------- TOP BAR ---------- */
+.topbar {
+    height: 70px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    gap: 18px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    background: rgba(16,19,25,.86);
-    border: 1px solid var(--border);
+    padding: 0 19px;
+    background: rgba(16,19,25,.96);
+    border: 1px solid #242a33;
     border-radius: 18px;
-    box-shadow: 0 15px 45px rgba(0,0,0,.28);
-    backdrop-filter: blur(16px);
+    margin-bottom: 24px;
+    box-shadow: 0 18px 45px rgba(0,0,0,.28);
 }
 
-.brand {
+.brand-left {
     display: flex;
     align-items: center;
-    gap: 13px;
+    gap: 12px;
 }
 
-.brand-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+.brand-mark {
+    width: 43px;
+    height: 43px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 25px;
-    background: linear-gradient(145deg,#ffb84d,#ff6b1a);
-    box-shadow: 0 8px 24px rgba(255,110,20,.2);
+    background: linear-gradient(145deg,#ffc15a,#f47a18);
+    color: #15100a;
+    font-weight: 900;
+    font-size: 19px;
 }
 
-.brand-name {
-    color: #fff;
-    font-size: 18px;
+.brand-title {
+    color: #ffffff;
+    font-size: 16px;
     font-weight: 800;
-    letter-spacing: -.3px;
 }
 
-.brand-sub {
-    color: #7e8794;
-    font-size: 11px;
+.brand-caption {
+    color: #707986;
+    font-size: 10px;
     margin-top: 2px;
 }
 
-.status {
+.online-pill {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #aeb7c4;
-    font-size: 12px;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #45e58b;
-    box-shadow: 0 0 12px rgba(69,229,139,.7);
-}
-
-.hero {
-    padding: 34px;
-    border-radius: 25px;
-    background: linear-gradient(145deg, rgba(18,22,29,.98), rgba(11,13,18,.98));
-    border: 1px solid var(--border);
-    box-shadow: 0 25px 75px rgba(0,0,0,.34);
-    margin-bottom: 26px;
-}
-
-.hero-kicker {
-    color: var(--orange);
+    gap: 7px;
+    color: #aab2bd;
     font-size: 11px;
+}
+
+.online-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #45d98a;
+    box-shadow: 0 0 10px rgba(69,217,138,.7);
+}
+
+/* ---------- HERO ---------- */
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 42px 40px;
+    border-radius: 24px;
+    background:
+        linear-gradient(135deg, rgba(20,23,30,.98), rgba(11,13,17,.98));
+    border: 1px solid #242a33;
+    box-shadow: 0 25px 70px rgba(0,0,0,.32);
+    margin-bottom: 28px;
+}
+
+.hero:after {
+    content: "";
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    right: -100px;
+    top: -130px;
+    border-radius: 50%;
+    background: rgba(246,166,35,.07);
+    filter: blur(25px);
+}
+
+.hero-small {
+    color: #f1a53a;
+    font-size: 10px;
     font-weight: 800;
-    letter-spacing: 1.8px;
-    text-transform: uppercase;
+    letter-spacing: 2px;
     margin-bottom: 10px;
 }
 
 .hero-title {
-    color: #fff;
-    font-size: clamp(30px,4vw,50px);
-    line-height: 1.05;
+    color: #ffffff;
+    font-size: clamp(31px, 4vw, 49px);
+    line-height: 1.06;
     font-weight: 800;
     letter-spacing: -1.8px;
-    margin-bottom: 12px;
+    margin-bottom: 13px;
 }
 
 .hero-title span {
-    color: var(--orange);
+    color: #f4a63a;
 }
 
-.hero-desc {
-    max-width: 720px;
-    color: #929aa6;
-    line-height: 1.7;
+.hero-description {
+    max-width: 760px;
+    color: #8e97a3;
     font-size: 14px;
+    line-height: 1.75;
 }
 
+/* ---------- SECTION ---------- */
 .section-title {
-    color: #fff;
+    color: #f7f7f7;
     font-size: 18px;
     font-weight: 800;
-    margin: 28px 0 13px;
+    margin: 30px 0 14px;
 }
 
+/* ---------- SERVICE CARDS ---------- */
 .service-card {
-    min-height: 112px;
-    padding: 20px 12px;
+    height: 112px;
+    box-sizing: border-box;
+    padding: 19px 8px;
     text-align: center;
     background: #101319;
-    border: 1px solid #202630;
-    border-radius: 18px;
-    transition: .2s ease;
+    border: 1px solid #222932;
+    border-radius: 16px;
+    transition: all .18s ease;
 }
 
 .service-card:hover {
     transform: translateY(-4px);
-    border-color: rgba(255,157,61,.55);
-    box-shadow: 0 14px 35px rgba(0,0,0,.25);
+    border-color: rgba(244,166,58,.55);
+    box-shadow: 0 15px 35px rgba(0,0,0,.28);
 }
 
 .service-icon {
-    font-size: 25px;
-    margin-bottom: 10px;
+    color: #f4a63a;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 11px;
 }
 
 .service-name {
-    color: #cdd3dc;
-    font-size: 12px;
+    color: #c8ced7;
+    font-size: 11px;
     font-weight: 700;
 }
 
+/* ---------- QUICK BOX ---------- */
 .quick-box {
-    padding: 18px;
+    padding: 17px;
     background: #0e1116;
-    border: 1px solid #202630;
+    border: 1px solid #222932;
     border-radius: 18px;
 }
 
-.stButton > button {
-    width: 100%;
-    min-height: 42px;
-    border-radius: 12px !important;
-    background: #12161d !important;
-    border: 1px solid #282f3a !important;
-    color: #dce1e8 !important;
-    font-weight: 700 !important;
-    transition: .18s ease;
-}
-
-.stButton > button:hover {
-    border-color: var(--orange) !important;
-    color: #fff !important;
-    transform: translateY(-1px);
-}
-
+/* ---------- CHAT ---------- */
 [data-testid="stChatMessage"] {
-    background: #101319;
-    border: 1px solid #202630;
-    border-radius: 17px;
-    margin-bottom: 10px;
+    background: #101319 !important;
+    border: 1px solid #222932 !important;
+    border-radius: 17px !important;
+    margin-bottom: 11px !important;
 }
 
 [data-testid="stChatMessage"] p {
-    color: #dbe0e7;
-    line-height: 1.65;
+    color: #d9dee5 !important;
+    line-height: 1.7 !important;
 }
 
 [data-testid="stChatInput"] {
-    background: transparent;
+    background: transparent !important;
 }
 
-[data-testid="stChatInput"] textarea {
+[data-testid="stChatInput"] > div {
     background: #0e1116 !important;
-    color: #fff !important;
-    border: 1px solid #2a313c !important;
+    border: 1px solid #292f39 !important;
     border-radius: 15px !important;
 }
 
+[data-testid="stChatInput"] textarea {
+    color: #ffffff !important;
+    background: transparent !important;
+}
+
 [data-testid="stChatInput"] textarea:focus {
-    border-color: var(--orange) !important;
-    box-shadow: 0 0 0 1px rgba(255,157,61,.3) !important;
+    border-color: #f4a63a !important;
 }
 
-.stTextInput label {
-    color: #aeb6c2 !important;
+/* ---------- SIDEBAR ---------- */
+section[data-testid="stSidebar"] {
+    background: #0b0e12 !important;
+    border-right: 1px solid #242a33 !important;
 }
 
-.sidebar-title {
-    color: #fff;
-    font-weight: 800;
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 28px !important;
+}
+
+.sidebar-heading {
+    color: #ffffff;
     font-size: 17px;
+    font-weight: 800;
 }
 
+.sidebar-sub {
+    color: #69727f;
+    font-size: 11px;
+    margin: 4px 0 20px;
+}
+
+/* ---------- ALERT ---------- */
+div[data-testid="stAlert"] {
+    border-radius: 12px !important;
+}
+
+/* ---------- FOOTER ---------- */
 .footer {
+    color: #59616d;
+    font-size: 10px;
+    text-align: center;
     margin-top: 45px;
     padding-top: 20px;
-    border-top: 1px solid #1b2028;
-    text-align: center;
-    color: #5f6875;
-    font-size: 11px;
+    border-top: 1px solid #1c222a;
 }
 
-.logout-box {
-    color: #8f98a5;
-    font-size: 11px;
-    margin-top: 5px;
-}
+/* ---------- MOBILE ---------- */
+@media(max-width: 700px) {
+    .block-container {
+        padding: 14px !important;
+    }
 
-@media(max-width:700px) {
-    .block-container { padding: 12px; }
-    .hero { padding: 24px 20px; }
-    .hero-title { font-size: 31px; }
-    .app-top { padding: 13px; }
+    .hero {
+        padding: 28px 22px;
+    }
+
+    .hero-title {
+        font-size: 31px;
+    }
+
+    .topbar {
+        padding: 0 13px;
+    }
+
+    .online-pill {
+        display: none;
+    }
 }
 </style>
 """
 
+st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+
+
 # =========================================================
-# LOGIN SCREEN
+# LOGIN
 # =========================================================
 if not st.session_state.authenticated:
-    st.markdown(LOGIN_CSS, unsafe_allow_html=True)
 
-    st.markdown('<div class="login-wrap"><div class="login-card">', unsafe_allow_html=True)
-    st.markdown('<div class="login-logo">🤖</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-title">CSC HELPDESK AI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-page"><div class="login-card">', unsafe_allow_html=True)
+
     st.markdown(
-        '<div class="login-subtitle">Secure access • Digital Service Assistant</div>',
+        '<div class="login-mark">C</div>'
+        '<div class="login-title">CSC HELPDESK AI</div>'
+        '<div class="login-subtitle">Secure access to your digital service assistant</div>',
         unsafe_allow_html=True
     )
 
-    st.markdown('<div class="login-label">Username</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-label">USERNAME</div>', unsafe_allow_html=True)
     login_user = st.text_input(
         "Username",
         placeholder="Enter username",
@@ -419,7 +461,7 @@ if not st.session_state.authenticated:
         key="login_user"
     )
 
-    st.markdown('<div class="login-label">Password</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-label">PASSWORD</div>', unsafe_allow_html=True)
     login_pass = st.text_input(
         "Password",
         type="password",
@@ -428,21 +470,23 @@ if not st.session_state.authenticated:
         key="login_pass"
     )
 
-    st.markdown('<div class="login-btn">', unsafe_allow_html=True)
-    login_clicked = st.button("LOGIN  →")
+    st.markdown('<div class="login-button">', unsafe_allow_html=True)
+    clicked = st.button("SIGN IN  →")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if login_clicked:
+    if clicked:
         if login_user == USERNAME and login_pass == PASSWORD:
             st.session_state.authenticated = True
             st.rerun()
         else:
-            st.error("Invalid username or password.")
+            st.error("Username ya password galat hai.")
 
     st.markdown(
-        '<div class="login-note">Authorized users only</div></div></div>',
+        '<div class="login-info">Authorized users only • Secure dashboard</div>',
         unsafe_allow_html=True
     )
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
     st.stop()
 
 
@@ -537,7 +581,7 @@ SERVICE_CATALOG_TEXT = "\n".join(
 
 
 # =========================================================
-# SYSTEM PROMPT
+# AI PROMPT
 # =========================================================
 SYSTEM_PROMPT = f"""
 You are CSC_HELPDESK_AI, a private customer-service assistant for OUR CSC / Jan Seva / Digital Service Centre.
@@ -559,19 +603,14 @@ LANGUAGE:
 - English question = English answer.
 
 For a service/price question, prefer:
-✅ Haan, ye kaam humare yahan ho jayega.
-📌 Kaam: <service>
-💰 Hamara charge: ₹<service charge>
-🏛️ Official/Government fee: <configured value>
-📄 Zaroori documents: <configured documents>
-⏱️ Approx. time: <configured time>
+Haan, ye kaam humare yahan ho jayega.
+Kaam: <service>
+Hamara charge: ₹<service charge>
+Official/Government fee: <configured value>
+Zaroori documents: <configured documents>
+Approx. time: <configured time>
 
-Then:
-"Final approval/processing concerned government department ke rules ke according hota hai."
-
-If the user only asks whether it can be done, answer directly first.
-If the user asks only the charge, give the charge directly.
-For multiple services, list each separately.
+Final approval/processing concerned government department ke rules ke according hota hai.
 
 SERVICE CATALOG:
 {SERVICE_CATALOG_TEXT}
@@ -579,32 +618,26 @@ SERVICE CATALOG:
 
 
 # =========================================================
-# SESSION MEMORY
-# =========================================================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-
-# =========================================================
 # SIDEBAR
 # =========================================================
 with st.sidebar:
-    st.markdown('<div class="sidebar-title">⚙️ Control Panel</div>', unsafe_allow_html=True)
-    st.caption("CSC Helpdesk AI")
+    st.markdown('<div class="sidebar-heading">CSC HELPDESK AI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-sub">Control Panel</div>', unsafe_allow_html=True)
 
-    if st.button("🆕 New Chat"):
+    if st.button("New Chat"):
         st.session_state.messages = []
         st.rerun()
 
-    if st.button("🚪 Logout"):
+    if st.button("Logout"):
         st.session_state.authenticated = False
         st.session_state.messages = []
         st.rerun()
 
     st.markdown("---")
-    st.markdown("**Available Services**")
-    for service in SERVICE_CATALOG:
-        st.write("•", service)
+    st.markdown("**Configured Services**")
+
+    for name in SERVICE_CATALOG:
+        st.caption(name)
 
 
 # =========================================================
@@ -612,16 +645,16 @@ with st.sidebar:
 # =========================================================
 st.markdown(
     """
-    <div class="app-top">
-        <div class="brand">
-            <div class="brand-icon">🤖</div>
+    <div class="topbar">
+        <div class="brand-left">
+            <div class="brand-mark">C</div>
             <div>
-                <div class="brand-name">CSC HELPDESK AI</div>
-                <div class="brand-sub">Digital Service Assistant</div>
+                <div class="brand-title">CSC HELPDESK AI</div>
+                <div class="brand-caption">Digital Service Assistant</div>
             </div>
         </div>
-        <div class="status">
-            <span class="status-dot"></span>
+        <div class="online-pill">
+            <span class="online-dot"></span>
             AI Assistant Online
         </div>
     </div>
@@ -636,11 +669,11 @@ st.markdown(
 st.markdown(
     """
     <div class="hero">
-        <div class="hero-kicker">SMART DIGITAL SERVICE CENTRE</div>
+        <div class="hero-small">SMART DIGITAL SERVICE CENTRE</div>
         <div class="hero-title">Aapka kaam, <span>hamari madad.</span></div>
-        <div class="hero-desc">
-            Service ke baare mein poochhiye, availability samajhiye,
-            required documents aur hamara configured charge jaaniye.
+        <div class="hero-description">
+            Kisi bhi configured service ke baare mein poochhiye.
+            AI aapko service, documents, approximate time aur centre ka charge batayega.
         </div>
     </div>
     """,
@@ -654,16 +687,16 @@ st.markdown(
 st.markdown('<div class="section-title">Services</div>', unsafe_allow_html=True)
 
 services = [
-    ("🪪", "Aadhaar"),
-    ("💳", "PAN Card"),
-    ("📦", "Ration Card"),
-    ("🌾", "PM Kisan"),
-    ("🏥", "Ayushman"),
-    ("📄", "Certificates"),
-    ("👤", "Pension"),
-    ("💻", "e-District"),
-    ("🏢", "CSC Services"),
-    ("＋", "More Services"),
+    ("A", "Aadhaar"),
+    ("P", "PAN Card"),
+    ("R", "Ration Card"),
+    ("K", "PM Kisan"),
+    ("H", "Ayushman"),
+    ("C", "Certificates"),
+    ("P", "Pension"),
+    ("E", "e-District"),
+    ("C", "CSC Services"),
+    ("+", "More Services"),
 ]
 
 cols = st.columns(10)
@@ -710,7 +743,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================================================
-# OLD MESSAGES
+# CHAT HISTORY
 # =========================================================
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -718,7 +751,7 @@ for message in st.session_state.messages:
 
 
 # =========================================================
-# USER INPUT
+# INPUT
 # =========================================================
 user_message = st.chat_input(
     "Apna sawaal likhiye... jaise: PAN card banwane ka charge kitna hai?"
@@ -755,7 +788,6 @@ if user_message:
                         }
                     )
                     break
-
                 except Exception as e:
                     if "503" in str(e) and attempt < 2:
                         time.sleep(3)
@@ -791,9 +823,9 @@ if user_message:
 st.markdown(
     """
     <div class="footer">
-        CSC_HELPDESK_AI • Digital Service Assistant
+        CSC HELPDESK AI &nbsp; • &nbsp; Digital Service Assistant
         <br><br>
-        Fast • Simple • Secure
+        Fast &nbsp; • &nbsp; Simple &nbsp; • &nbsp; Secure
     </div>
     """,
     unsafe_allow_html=True
