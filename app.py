@@ -1,690 +1,904 @@
+
 import os
+import re
+import json
 import time
+import hashlib
+import hmac
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import streamlit as st
+import streamlit.components.v1 as components
 from google import genai
 
-# =========================================================
-# PAGE
-# =========================================================
+# ==========================================================
+# CSC HELPDESK AI | ADVANCED ROBOTIC EDITION
+# ==========================================================
+
 st.set_page_config(
-    page_title="CSC Helpdesk AI",
-    page_icon="C",
+    page_title="CSC HELPDESK AI | Advanced",
+    page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded"
 )
 
-# =========================================================
-# LOGIN SETTINGS
-# =========================================================
-# CHANGE THESE IF YOU WANT
-DEFAULT_USERNAME = "admin"
-DEFAULT_PASSWORD = "12345"
-
-USERNAME = st.secrets.get("APP_USERNAME", DEFAULT_USERNAME)
-PASSWORD = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
-
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-
-# =========================================================
-# GLOBAL CSS
-# =========================================================
-GLOBAL_CSS = r"""
-<style>
-/* ---------- RESET / BASE ---------- */
-html, body, [class*="css"] {
-    font-family: Inter, Arial, Helvetica, sans-serif !important;
-}
-
-.stApp {
-    background: #07090c !important;
-    color: #f5f5f5 !important;
-}
-
-[data-testid="stAppViewContainer"] {
-    background:
-        radial-gradient(circle at 85% 5%, rgba(246,166,35,.08), transparent 25%),
-        radial-gradient(circle at 5% 80%, rgba(246,166,35,.045), transparent 25%),
-        #07090c !important;
-}
-
-[data-testid="stHeader"] {
-    background: transparent !important;
-}
-
-[data-testid="stToolbar"] {
-    background: transparent !important;
-}
-
-.block-container {
-    max-width: 1220px !important;
-    padding-top: 28px !important;
-    padding-bottom: 60px !important;
-}
-
-/* ---------- LOGIN ---------- */
-.login-page {
-    min-height: 88vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.login-card {
-    width: 410px;
-    max-width: 94vw;
-    padding: 42px 38px 34px;
-    background: #101319;
-    border: 1px solid #252b34;
-    border-radius: 24px;
-    box-shadow: 0 35px 90px rgba(0,0,0,.60);
-}
-
-.login-mark {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 20px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(145deg, #ffc15a, #f47a18);
-    color: #111;
-    font-size: 28px;
-    font-weight: 900;
-    box-shadow: 0 12px 35px rgba(244,122,24,.22);
-}
-
-.login-title {
-    text-align: center;
-    color: #ffffff;
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -.8px;
-}
-
-.login-subtitle {
-    text-align: center;
-    color: #858d99;
-    font-size: 13px;
-    margin-top: 7px;
-    margin-bottom: 28px;
-}
-
-.login-label {
-    color: #cbd1d9;
-    font-size: 12px;
-    font-weight: 700;
-    margin: 13px 0 7px;
-}
-
-.login-info {
-    text-align: center;
-    color: #606975;
-    font-size: 11px;
-    margin-top: 18px;
-}
-
-/* ---------- INPUTS ---------- */
-.stTextInput > div > div > input {
-    height: 48px !important;
-    background: #0a0d11 !important;
-    color: #ffffff !important;
-    border: 1px solid #2a3039 !important;
-    border-radius: 12px !important;
-    padding: 0 14px !important;
-}
-
-.stTextInput > div > div > input:focus {
-    border-color: #f3a437 !important;
-    box-shadow: 0 0 0 1px #f3a437 !important;
-}
-
-.stTextInput label {
-    display: none !important;
-}
-
-/* ---------- ALL BUTTONS ---------- */
-.stButton > button {
-    width: 100% !important;
-    min-height: 43px !important;
-    border-radius: 11px !important;
-    background: #12161c !important;
-    border: 1px solid #2a313b !important;
-    color: #e5e8ed !important;
-    font-weight: 700 !important;
-    transition: all .18s ease !important;
-}
-
-.stButton > button:hover {
-    border-color: #f3a437 !important;
-    color: #ffffff !important;
-    transform: translateY(-1px) !important;
-    background: #171b21 !important;
-}
-
-.login-button .stButton > button {
-    background: linear-gradient(135deg, #ffc15a, #f47a18) !important;
-    border: none !important;
-    color: #17120b !important;
-    min-height: 49px !important;
-    font-size: 14px !important;
-    box-shadow: 0 12px 28px rgba(244,122,24,.18) !important;
-}
-
-.login-button .stButton > button:hover {
-    background: linear-gradient(135deg, #ffd078, #ff8730) !important;
-    color: #17120b !important;
-}
-
-/* ---------- TOP BAR ---------- */
-.topbar {
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 19px;
-    background: rgba(16,19,25,.96);
-    border: 1px solid #242a33;
-    border-radius: 18px;
-    margin-bottom: 24px;
-    box-shadow: 0 18px 45px rgba(0,0,0,.28);
-}
-
-.brand-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.brand-mark {
-    width: 43px;
-    height: 43px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(145deg,#ffc15a,#f47a18);
-    color: #15100a;
-    font-weight: 900;
-    font-size: 19px;
-}
-
-.brand-title {
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.brand-caption {
-    color: #707986;
-    font-size: 10px;
-    margin-top: 2px;
-}
-
-.online-pill {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: #aab2bd;
-    font-size: 11px;
-}
-
-.online-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #45d98a;
-    box-shadow: 0 0 10px rgba(69,217,138,.7);
-}
-
-/* ---------- HERO ---------- */
-.hero {
-    position: relative;
-    overflow: hidden;
-    padding: 42px 40px;
-    border-radius: 24px;
-    background:
-        linear-gradient(135deg, rgba(20,23,30,.98), rgba(11,13,17,.98));
-    border: 1px solid #242a33;
-    box-shadow: 0 25px 70px rgba(0,0,0,.32);
-    margin-bottom: 28px;
-}
-
-.hero:after {
-    content: "";
-    position: absolute;
-    width: 260px;
-    height: 260px;
-    right: -100px;
-    top: -130px;
-    border-radius: 50%;
-    background: rgba(246,166,35,.07);
-    filter: blur(25px);
-}
-
-.hero-small {
-    color: #f1a53a;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-}
-
-.hero-title {
-    color: #ffffff;
-    font-size: clamp(31px, 4vw, 49px);
-    line-height: 1.06;
-    font-weight: 800;
-    letter-spacing: -1.8px;
-    margin-bottom: 13px;
-}
-
-.hero-title span {
-    color: #f4a63a;
-}
-
-.hero-description {
-    max-width: 760px;
-    color: #8e97a3;
-    font-size: 14px;
-    line-height: 1.75;
-}
-
-/* ---------- SECTION ---------- */
-.section-title {
-    color: #f7f7f7;
-    font-size: 18px;
-    font-weight: 800;
-    margin: 30px 0 14px;
-}
-
-/* ---------- SERVICE CARDS ---------- */
-.service-card {
-    height: 112px;
-    box-sizing: border-box;
-    padding: 19px 8px;
-    text-align: center;
-    background: #101319;
-    border: 1px solid #222932;
-    border-radius: 16px;
-    transition: all .18s ease;
-}
-
-.service-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(244,166,58,.55);
-    box-shadow: 0 15px 35px rgba(0,0,0,.28);
-}
-
-.service-icon {
-    color: #f4a63a;
-    font-size: 22px;
-    font-weight: 800;
-    margin-bottom: 11px;
-}
-
-.service-name {
-    color: #c8ced7;
-    font-size: 11px;
-    font-weight: 700;
-}
-
-/* ---------- QUICK BOX ---------- */
-.quick-box {
-    padding: 17px;
-    background: #0e1116;
-    border: 1px solid #222932;
-    border-radius: 18px;
-}
-
-/* ---------- CHAT ---------- */
-[data-testid="stChatMessage"] {
-    background: #101319 !important;
-    border: 1px solid #222932 !important;
-    border-radius: 17px !important;
-    margin-bottom: 11px !important;
-}
-
-[data-testid="stChatMessage"] p {
-    color: #d9dee5 !important;
-    line-height: 1.7 !important;
-}
-
-[data-testid="stChatInput"] {
-    background: transparent !important;
-}
-
-[data-testid="stChatInput"] > div {
-    background: #0e1116 !important;
-    border: 1px solid #292f39 !important;
-    border-radius: 15px !important;
-}
-
-[data-testid="stChatInput"] textarea {
-    color: #ffffff !important;
-    background: transparent !important;
-}
-
-[data-testid="stChatInput"] textarea:focus {
-    border-color: #f4a63a !important;
-}
-
-/* ---------- SIDEBAR ---------- */
-section[data-testid="stSidebar"] {
-    background: #0b0e12 !important;
-    border-right: 1px solid #242a33 !important;
-}
-
-section[data-testid="stSidebar"] .block-container {
-    padding-top: 28px !important;
-}
-
-.sidebar-heading {
-    color: #ffffff;
-    font-size: 17px;
-    font-weight: 800;
-}
-
-.sidebar-sub {
-    color: #69727f;
-    font-size: 11px;
-    margin: 4px 0 20px;
-}
-
-/* ---------- ALERT ---------- */
-div[data-testid="stAlert"] {
-    border-radius: 12px !important;
-}
-
-/* ---------- FOOTER ---------- */
-.footer {
-    color: #59616d;
-    font-size: 10px;
-    text-align: center;
-    margin-top: 45px;
-    padding-top: 20px;
-    border-top: 1px solid #1c222a;
-}
-
-/* ---------- MOBILE ---------- */
-@media(max-width: 700px) {
-    .block-container {
-        padding: 14px !important;
-    }
-
-    .hero {
-        padding: 28px 22px;
-    }
-
-    .hero-title {
-        font-size: 31px;
-    }
-
-    .topbar {
-        padding: 0 13px;
-    }
-
-    .online-pill {
-        display: none;
-    }
-}
-</style>
-"""
-
-st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
-
-
-# =========================================================
-# LOGIN
-# =========================================================
-if not st.session_state.authenticated:
-
-    st.markdown('<div class="login-page"><div class="login-card">', unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="login-mark">C</div>'
-        '<div class="login-title">CSC HELPDESK AI</div>'
-        '<div class="login-subtitle">Secure access to your digital service assistant</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown('<div class="login-label">USERNAME</div>', unsafe_allow_html=True)
-    login_user = st.text_input(
-        "Username",
-        placeholder="Enter username",
-        label_visibility="collapsed",
-        key="login_user"
-    )
-
-    st.markdown('<div class="login-label">PASSWORD</div>', unsafe_allow_html=True)
-    login_pass = st.text_input(
-        "Password",
-        type="password",
-        placeholder="Enter password",
-        label_visibility="collapsed",
-        key="login_pass"
-    )
-
-    st.markdown('<div class="login-button">', unsafe_allow_html=True)
-    clicked = st.button("SIGN IN  →")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if clicked:
-        if login_user == USERNAME and login_pass == PASSWORD:
-            st.session_state.authenticated = True
-            st.rerun()
-        else:
-            st.error("Username ya password galat hai.")
-
-    st.markdown(
-        '<div class="login-info">Authorized users only • Secure dashboard</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
-    st.stop()
-
-
-# =========================================================
-# GEMINI
-# =========================================================
-API_KEY = os.environ.get("GEMINI_API_KEY")
+# ==========================================================
+# 1. CONFIGURATION
+# ==========================================================
+
+def get_setting(name, default=""):
+    try:
+        return st.secrets.get(name, os.environ.get(name, default))
+    except Exception:
+        return os.environ.get(name, default)
+
+API_KEY = get_setting("GEMINI_API_KEY")
+USERNAME = get_setting("APP_USERNAME", "admin")
+PASSWORD = get_setting("APP_PASSWORD", "12345")
+LOCK_PIN = get_setting("ROBOTIC_LOCK_PIN", "")
 
 if not API_KEY:
-    st.error("GEMINI_API_KEY is not configured.")
+    st.error("GEMINI_API_KEY configure nahi hai.")
+    st.code(
+        'GEMINI_API_KEY = "YOUR_API_KEY"\n'
+        'APP_USERNAME = "admin"\n'
+        'APP_PASSWORD = "CHANGE_YOUR_PASSWORD"\n'
+        'ROBOTIC_LOCK_PIN = "1234"',
+        language="toml"
+    )
     st.stop()
 
-client = genai.Client(api_key=API_KEY)
+# ==========================================================
+# 2. SESSION STATE
+# ==========================================================
 
+DEFAULTS = {
+    "authenticated": False,
+    "messages": [],
+    "pending_prompt": None,
+    "voice_enabled": True,
+    "voice_style": "BOSS DEEP",
+    "voice_language": "Auto",
+    "last_audio_hash": None,
+    "audio_counter": 0,
+    "request_count": 0
+}
 
-# =========================================================
-# SERVICE CATALOG
-# =========================================================
+for key, value in DEFAULTS.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+# ==========================================================
+# 3. LIVE INDIAN DATE AND TIME
+# ==========================================================
+
+def get_indian_time():
+    return datetime.now(ZoneInfo("Asia/Kolkata"))
+
+# ==========================================================
+# 4. GEMINI CLIENT
+# ==========================================================
+
+@st.cache_resource
+def get_client(api_key):
+    return genai.Client(api_key=api_key)
+
+client = get_client(API_KEY)
+
+# ==========================================================
+# 5. SERVICE CATALOG
+# ==========================================================
+
 SERVICE_CATALOG = {
     "Aadhaar Print": {
-        "keywords": ["aadhaar print", "aadhar print", "aadhaar nikalna"],
-        "service_charge": 50,
-        "official_fee": "Official portal/rules ke according",
+        "keywords": [
+            "aadhaar print", "aadhar print",
+            "aadhaar nikalna", "aadhar printout"
+        ],
+        "charge": 50,
+        "official_fee": "Applicable official rules ke according",
         "documents": "Aadhaar number/card details",
         "time": "5-10 minute"
     },
     "PAN Card Apply": {
-        "keywords": ["pan card", "pan apply", "new pan", "pan banana"],
-        "service_charge": 350,
+        "keywords": [
+            "pan card", "pan apply",
+            "new pan", "pan banana"
+        ],
+        "charge": 350,
         "official_fee": "Portal ke according",
-        "documents": "Aadhaar + required PAN documents",
-        "time": "Application submission ke baad processing"
+        "documents": "Aadhaar aur required PAN documents",
+        "time": "Application processing ke according"
     },
     "PAN Correction": {
-        "keywords": ["pan correction", "pan me correction", "pan update"],
-        "service_charge": 350,
+        "keywords": [
+            "pan correction", "pan me correction",
+            "pan update"
+        ],
+        "charge": 350,
         "official_fee": "Portal ke according",
         "documents": "Required correction proof",
         "time": "Application processing ke according"
     },
     "Income Certificate": {
-        "keywords": ["income certificate", "aay praman patra", "aay certificate"],
-        "service_charge": 500,
+        "keywords": [
+            "income certificate", "aay praman patra",
+            "aay certificate"
+        ],
+        "charge": 500,
         "official_fee": "Portal/department ke according",
-        "documents": "Required identity/address/income documents",
+        "documents": "Required identity, address and income documents",
         "time": "Department processing ke according"
     },
     "Caste Certificate": {
-        "keywords": ["caste certificate", "jati praman patra", "jati certificate"],
-        "service_charge": 500,
+        "keywords": [
+            "caste certificate", "jati praman patra",
+            "jati certificate"
+        ],
+        "charge": 500,
         "official_fee": "Portal/department ke according",
         "documents": "Required identity and caste-related documents",
         "time": "Department processing ke according"
     },
     "Residence Certificate": {
-        "keywords": ["residence certificate", "niwas praman patra", "niwas certificate", "domicile"],
-        "service_charge": 500,
+        "keywords": [
+            "residence certificate", "niwas praman patra",
+            "niwas certificate", "domicile"
+        ],
+        "charge": 500,
         "official_fee": "Portal/department ke according",
-        "documents": "Required identity/address documents",
+        "documents": "Required identity and address documents",
         "time": "Department processing ke according"
     },
     "Online Form Filling": {
-        "keywords": ["online form", "form bharna", "online application", "form filling"],
-        "service_charge": 150,
+        "keywords": [
+            "online form", "form bharna",
+            "online application", "form filling"
+        ],
+        "charge": 150,
         "official_fee": "Portal fee, if any, is separate",
         "documents": "Form ke according",
         "time": "10-30 minute"
     },
     "Print": {
-        "keywords": ["print", "document print", "printout"],
-        "service_charge": 5,
+        "keywords": [
+            "print", "document print", "printout"
+        ],
+        "charge": 5,
         "official_fee": "N/A",
         "documents": "File/document",
         "time": "2-5 minute"
     },
     "Scan": {
-        "keywords": ["scan", "document scan"],
-        "service_charge": 10,
+        "keywords": [
+            "scan", "document scan"
+        ],
+        "charge": 10,
         "official_fee": "N/A",
         "documents": "Original document",
         "time": "2-5 minute"
-    },
+    }
 }
 
-SERVICE_CATALOG_TEXT = "\n".join(
-    f"- {name}: hamara charge ₹{data['service_charge']}; "
-    f"official fee: {data['official_fee']}; "
-    f"documents: {data['documents']}; time: {data['time']}; "
-    f"keywords: {', '.join(data['keywords'])}"
-    for name, data in SERVICE_CATALOG.items()
-)
+def catalog_text():
+    lines = []
+    for name, data in SERVICE_CATALOG.items():
+        lines.append(
+            f"{name}: Centre charge ₹{data['charge']}; "
+            f"Official fee: {data['official_fee']}; "
+            f"Documents: {data['documents']}; "
+            f"Time: {data['time']}; "
+            f"Keywords: {', '.join(data['keywords'])}"
+        )
+    return "\n".join(lines)
 
+# ==========================================================
+# 6. SYSTEM PROMPT
+# ==========================================================
 
-# =========================================================
-# AI PROMPT
-# =========================================================
-SYSTEM_PROMPT = f"""
-You are CSC_HELPDESK_AI, a private customer-service assistant for OUR CSC / Jan Seva / Digital Service Centre.
+def make_system_prompt():
+    now = get_indian_time()
 
-Your main job is to understand the customer's work, tell them whether OUR CENTRE can help with it, and give the configured service charge.
+    return f"""
+You are CSC HELPDESK AI, an advanced digital service assistant
+for a private CSC / Jan Seva / Digital Service Centre.
 
-IMPORTANT:
-- You represent OUR SERVICE CENTRE, not a government department.
-- Never promise government approval. Say we can help/apply/process; final approval depends on the concerned department.
-- Use ONLY SERVICE_CATALOG below for our centre's charges. Never invent a price.
-- If the requested service is not configured, say its charge is not configured and ask the customer to contact the centre.
-- Do not invent government fees, deadlines, eligibility or rules.
-- Never ask for OTP, password, UPI PIN, ATM PIN, CVV or other sensitive credentials.
-- For changing government information, advise verification on the official portal.
+You help customers understand services, documents, centre charges
+and general government service procedures.
+
+IDENTITY:
+- You are CSC HELPDESK AI.
+- Address the customer politely.
+- When suitable, you may call the customer Boss.
+- Never claim to be a government official.
+- Never promise that a government application will be approved.
+
+LIVE DATE AND TIME:
+- Current date: {now.strftime("%d %B %Y")}
+- Current day: {now.strftime("%A")}
+- Current time: {now.strftime("%I:%M %p")}
+- Timezone: Asia/Kolkata (IST)
+- Use this date and time for current-date questions.
+- Never present 2024 as the current year.
 
 LANGUAGE:
-- Hindi question = Hindi answer.
-- Hinglish question = Hinglish answer.
-- English question = English answer.
+- Hindi question: Reply in simple Hindi.
+- Hinglish question: Reply in natural Hinglish.
+- English question: Reply in English.
+- Keep explanations easy to understand.
 
-For a service/price question, prefer:
-Haan, ye kaam humare yahan ho jayega.
-Kaam: <service>
-Hamara charge: ₹<service charge>
-Official/Government fee: <configured value>
-Zaroori documents: <configured documents>
-Approx. time: <configured time>
-
-Final approval/processing concerned government department ke rules ke according hota hai.
+SERVICE CHARGES:
+Use ONLY the centre charges in the service catalog below.
+Never invent or change a configured centre charge.
+If a service is not listed, say its centre charge is not configured.
+Government fees and centre service charges are different.
+Never invent government fees, deadlines, eligibility or rules.
 
 SERVICE CATALOG:
-{SERVICE_CATALOG_TEXT}
+{catalog_text()}
+
+SERVICE RESPONSE FORMAT:
+For service and price questions, provide:
+1. Service name
+2. Centre service charge
+3. Official fee, if verified/configured
+4. Required documents
+5. Approximate time, if configured
+6. Important note about department approval
+
+GOVERNMENT SAFETY:
+- Government approval depends on the concerned department.
+- Advise customers to verify rules on the official portal.
+- Never ask customers to share OTP, password, UPI PIN,
+  ATM PIN, CVV or other confidential credentials.
+- Do not claim to submit applications unless a real submission
+  integration is available.
+- For uncertain or changing information, clearly say it needs
+  verification from the official source.
+
+RESPONSE STYLE:
+- Give direct answers.
+- Use short paragraphs, bullet points and numbered steps.
+- Avoid repeating the same information.
+- Do not generate fake application status or reference numbers.
 """
 
+# ==========================================================
+# 7. ADVANCED ROBOTIC THEME
+# ==========================================================
 
-# =========================================================
-# SIDEBAR
-# =========================================================
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+    --cyan: #00eaff;
+    --blue: #168bff;
+    --dark: #030914;
+    --panel: #071727;
+    --text: #d9fbff;
+    --border: rgba(0,234,255,.34);
+}
+
+.stApp {
+    background:
+        radial-gradient(ellipse at 50% -15%,
+            rgba(0,150,220,.18), transparent 55%),
+        linear-gradient(145deg,#020711,#071727 50%,#020711);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: transparent;
+}
+
+[data-testid="stHeader"],
+[data-testid="stToolbar"] {
+    background: transparent !important;
+}
+
+.block-container {
+    max-width: 1300px !important;
+    padding-top: 24px !important;
+    padding-bottom: 70px !important;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg,#041323,#020711) !important;
+    border-right: 1px solid var(--border);
+    box-shadow: 5px 0 30px rgba(0,234,255,.08);
+}
+
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span {
+    color: #9ffaff !important;
+}
+
+.robot-title {
+    text-align: center;
+    font-family: 'Orbitron',sans-serif;
+    font-size: clamp(34px,5vw,65px);
+    font-weight: 900;
+    letter-spacing: .12em;
+    color: #dffcff;
+    text-shadow:
+        0 0 8px #00eaff,
+        0 0 22px #00eaff,
+        0 0 48px rgba(0,130,255,.8);
+    animation: titlePulse 3s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+    0%,100% {
+        text-shadow: 0 0 8px #00eaff,0 0 22px #00eaff;
+    }
+    50% {
+        text-shadow: 0 0 15px #00eaff,0 0 38px #00aaff;
+    }
+}
+
+.robot-sub {
+    text-align: center;
+    color: #6cefff;
+    font-family: 'Orbitron',sans-serif;
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-shadow: 0 0 9px #00eaff;
+    margin: 5px 0 22px;
+}
+
+.status-bar {
+    text-align: center;
+    color: #9ffaff;
+    background: rgba(0,234,255,.04);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px;
+    font-family: 'Orbitron',sans-serif;
+    font-size: 10px;
+    letter-spacing: .08em;
+    box-shadow: 0 0 20px rgba(0,234,255,.09);
+    margin-bottom: 20px;
+}
+
+.status-dot {
+    color: #36ff9b;
+    text-shadow: 0 0 12px #36ff9b;
+}
+
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 30px;
+    border-radius: 18px;
+    border: 1px solid rgba(0,234,255,.42);
+    background:
+        radial-gradient(circle at 90% 10%,
+            rgba(0,234,255,.12), transparent 30%),
+        linear-gradient(135deg,rgba(5,28,48,.97),rgba(2,10,22,.96));
+    box-shadow:
+        0 0 28px rgba(0,234,255,.08),
+        inset 0 0 25px rgba(0,234,255,.025);
+    margin: 20px 0 28px;
+}
+
+.hero-label {
+    color: #00eaff;
+    font-family: 'Orbitron',sans-serif;
+    font-size: 10px;
+    letter-spacing: .15em;
+    text-shadow: 0 0 9px #00eaff;
+    margin-bottom: 12px;
+}
+
+.hero-title {
+    color: #e6fdff;
+    font-family: 'Orbitron',sans-serif;
+    font-size: clamp(25px,3.5vw,43px);
+    font-weight: 800;
+    line-height: 1.25;
+    text-shadow: 0 0 10px rgba(0,234,255,.7);
+}
+
+.hero-title span {
+    color: #00eaff;
+    text-shadow: 0 0 13px #00eaff;
+}
+
+.hero-description {
+    color: #a4d8e1;
+    font-size: 16px;
+    line-height: 1.65;
+    margin-top: 12px;
+}
+
+.section-heading {
+    color: #bffaff;
+    font-family: 'Orbitron',sans-serif;
+    font-size: 14px;
+    letter-spacing: .08em;
+    margin: 27px 0 14px;
+    text-shadow: 0 0 9px rgba(0,234,255,.75);
+}
+
+.service-card {
+    height: 112px;
+    border: 1px solid rgba(0,234,255,.22);
+    background: linear-gradient(145deg,#0a1b2d,#06111e);
+    border-radius: 13px;
+    text-align: center;
+    padding: 16px 4px;
+    box-shadow: 0 0 12px rgba(0,234,255,.04);
+    transition: all .2s ease;
+}
+
+.service-card:hover {
+    border-color: #00eaff;
+    box-shadow: 0 0 20px rgba(0,234,255,.2);
+    transform: translateY(-3px);
+}
+
+.service-icon {
+    color: #00eaff;
+    font-family: 'Orbitron',sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    text-shadow: 0 0 12px #00eaff;
+    margin-bottom: 9px;
+}
+
+.service-name {
+    color: #c6faff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.welcome-card {
+    padding: 25px;
+    border: 1px solid rgba(0,234,255,.4);
+    border-radius: 15px;
+    text-align: center;
+    background: linear-gradient(135deg,#071e33,#030c19);
+    box-shadow: 0 0 25px rgba(0,234,255,.08);
+    margin: 22px 0;
+}
+
+.welcome-card h3 {
+    color: #00eaff;
+    font-family: 'Orbitron',sans-serif;
+    text-shadow: 0 0 12px #00eaff;
+}
+
+.welcome-card p {
+    color: #d9fbff;
+    font-size: 17px;
+    line-height: 1.7;
+    text-shadow: 0 0 6px rgba(0,234,255,.4);
+}
+
+[data-testid="stChatMessage"] {
+    background: rgba(5,20,36,.93) !important;
+    border: 1px solid rgba(0,234,255,.25) !important;
+    border-radius: 13px !important;
+    padding: 13px !important;
+    margin-bottom: 12px !important;
+    box-shadow: 0 4px 18px rgba(0,0,0,.2);
+    transition: border-color .2s ease;
+}
+
+[data-testid="stChatMessage"]:hover {
+    border-color: rgba(0,234,255,.6) !important;
+    box-shadow: 0 0 18px rgba(0,234,255,.1);
+}
+
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] li {
+    color: #d9fbff !important;
+    font-family: 'Rajdhani',sans-serif !important;
+    font-size: 17px !important;
+    line-height: 1.65 !important;
+    text-shadow: 0 0 5px rgba(0,234,255,.38);
+}
+
+[data-testid="stChatMessage"] strong {
+    color: #ffffff !important;
+    text-shadow: 0 0 8px #00eaff;
+}
+
+[data-testid="stChatInput"] > div {
+    background: #041323 !important;
+    border: 1px solid #00eaff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 0 13px rgba(0,234,255,.22);
+}
+
+[data-testid="stChatInput"] textarea {
+    color: #e1fcff !important;
+    -webkit-text-fill-color: #e1fcff !important;
+}
+
+[data-testid="stChatInput"] textarea::placeholder {
+    color: #6c9ba7 !important;
+}
+
+.stButton > button,
+.stDownloadButton > button {
+    min-height: 39px;
+    border: 1px solid rgba(0,234,255,.55) !important;
+    border-radius: 8px !important;
+    background: linear-gradient(100deg,#07516f,#087d98) !important;
+    color: #e7fdff !important;
+    font-family: 'Orbitron',sans-serif !important;
+    font-size: 10px !important;
+    letter-spacing: .04em;
+    box-shadow: 0 0 10px rgba(0,234,255,.12);
+    transition: all .2s ease;
+}
+
+.stButton > button:hover,
+.stDownloadButton > button:hover {
+    border-color: #00eaff !important;
+    box-shadow: 0 0 19px rgba(0,234,255,.35);
+    transform: translateY(-2px);
+}
+
+.stTextInput input,
+.stTextArea textarea,
+div[data-baseweb="select"] > div {
+    background: #071727 !important;
+    color: #d9fbff !important;
+    border-color: rgba(0,234,255,.3) !important;
+}
+
+.voice-panel {
+    padding: 12px 15px;
+    border: 1px solid rgba(0,234,255,.32);
+    border-radius: 10px;
+    background: rgba(0,234,255,.04);
+    color: #a9faff;
+    font-size: 14px;
+    text-shadow: 0 0 7px rgba(0,234,255,.45);
+    margin: 14px 0;
+}
+
+.metric-card {
+    background: #071727;
+    border: 1px solid rgba(0,234,255,.24);
+    border-radius: 11px;
+    padding: 14px;
+    text-align: center;
+}
+
+.metric-number {
+    color: #00eaff;
+    font-family: 'Orbitron',sans-serif;
+    font-size: 22px;
+    text-shadow: 0 0 12px #00eaff;
+}
+
+.metric-label {
+    color: #91cbd6;
+    font-size: 11px;
+}
+
+.footer {
+    text-align: center;
+    color: #65838e;
+    font-size: 11px;
+    border-top: 1px solid rgba(0,234,255,.15);
+    padding: 20px 0;
+    margin-top: 35px;
+}
+
+@media(max-width:700px) {
+    .block-container {
+        padding: 12px !important;
+    }
+    .hero {
+        padding: 21px;
+    }
+    .robot-title {
+        letter-spacing: .06em;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================================
+# 8. BOSS VOICE ENGINE
+# ==========================================================
+
+def speak_text(text, style="BOSS DEEP", language="Auto"):
+    safe_text = json.dumps(str(text), ensure_ascii=False)
+    safe_style = json.dumps(style)
+    safe_language = json.dumps(language)
+
+    html = """
+    <script>
+    (() => {
+        const text = __TEXT__;
+        const style = __STYLE__;
+        const language = __LANG__;
+
+        if (!window.speechSynthesis || !text) return;
+
+        const synth = window.speechSynthesis;
+        synth.cancel();
+
+        function start() {
+            const voices = synth.getVoices();
+            const u = new SpeechSynthesisUtterance(text);
+
+            const isHindi = /[\\u0900-\\u097F]/.test(text);
+            const target = language === "Hindi" || (language === "Auto" && isHindi)
+                ? "hi"
+                : "en";
+
+            let filtered = voices.filter(v => v.lang.toLowerCase().startsWith(target));
+
+            const maleNames = /david|mark|daniel|alex|james|george|hemant|madhur|male|guy|ryan/i;
+            const femaleNames = /zira|samantha|female|aria|susan|heera/i;
+
+            let chosen = filtered.find(v => maleNames.test(v.name))
+                || filtered.find(v => !femaleNames.test(v.name))
+                || filtered[0]
+                || voices.find(v => maleNames.test(v.name))
+                || voices[0];
+
+            if (chosen) u.voice = chosen;
+
+            if (style === "BOSS DEEP") {
+                u.rate = 0.82;
+                u.pitch = 0.55;
+            } else if (style === "ULTRA ROBOTIC") {
+                u.rate = 0.76;
+                u.pitch = 0.40;
+            } else {
+                u.rate = 0.91;
+                u.pitch = 0.68;
+            }
+
+            u.volume = 1;
+            synth.speak(u);
+        }
+
+        if (synth.getVoices().length) {
+            start();
+        } else {
+            synth.onvoiceschanged = () => {
+                synth.onvoiceschanged = null;
+                start();
+            };
+        }
+    })();
+    </script>
+    """
+
+    html = html.replace("__TEXT__", safe_text)
+    html = html.replace("__STYLE__", safe_style)
+    html = html.replace("__LANG__", safe_language)
+    components.html(html, height=0)
+
+# ==========================================================
+# 9. LOGIN
+# ==========================================================
+
+if not st.session_state.authenticated:
+    st.markdown(
+        '<div class="robot-title">CSC AI</div>'
+        '<div class="robot-sub">SECURE ACCESS TERMINAL</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown("""
+    <div class="welcome-card">
+        <h3>🔐 SYSTEM LOCKED</h3>
+        <p>CSC HELPDESK AI • AUTHORIZED ACCESS ONLY</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    with st.form("login_form"):
+        login_user = st.text_input(
+            "USERNAME",
+            placeholder="Enter username"
+        )
+        login_pass = st.text_input(
+            "PASSWORD",
+            type="password",
+            placeholder="Enter password"
+        )
+        submitted = st.form_submit_button(
+            "🔓 ACCESS SYSTEM",
+            use_container_width=True
+        )
+
+    if submitted:
+        if (
+            hmac.compare_digest(login_user, USERNAME)
+            and hmac.compare_digest(login_pass, PASSWORD)
+        ):
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("ACCESS DENIED — Incorrect login details.")
+
+    st.stop()
+
+# ==========================================================
+# 10. SIDEBAR CONTROL PANEL
+# ==========================================================
+
 with st.sidebar:
-    st.markdown('<div class="sidebar-heading">CSC HELPDESK AI</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-sub">Control Panel</div>', unsafe_allow_html=True)
+    st.markdown("## 🤖 CSC HELPDESK AI")
+    st.caption("ADVANCED ROBOTIC CONTROL PANEL")
+    st.success("● SYSTEM ONLINE")
 
-    if st.button("New Chat"):
-        st.session_state.messages = []
-        st.rerun()
+    now = get_indian_time()
+    st.markdown("### 📡 SYSTEM READOUT")
+    st.caption("INDIA DATE")
+    st.write(now.strftime("%d %B %Y"))
+    st.caption("INDIA TIME")
+    st.write(now.strftime("%I:%M:%S %p"))
 
-    if st.button("Logout"):
+    st.divider()
+
+    model_name = st.selectbox(
+        "⚙️ AI ENGINE",
+        ["gemini-2.5-flash", "gemini-2.0-flash"],
+        index=0
+    )
+
+    st.session_state.voice_enabled = st.toggle(
+        "🔊 AI VOICE REPLY",
+        value=st.session_state.voice_enabled
+    )
+
+    voice_style = st.selectbox(
+        "🎙️ VOICE PROFILE",
+        ["BOSS DEEP", "ULTRA ROBOTIC", "COMMANDER"],
+        index=0
+    )
+    st.session_state.voice_style = voice_style
+
+    voice_language = st.selectbox(
+        "VOICE LANGUAGE",
+        ["Auto", "Hindi", "English"],
+        index=0
+    )
+    st.session_state.voice_language = voice_language
+
+    if st.button("🔊 TEST BOSS VOICE", use_container_width=True):
+        speak_text(
+            "Greetings Boss. CSC Helpdesk AI is online. "
+            "All systems are ready. How may I assist you?",
+            voice_style,
+            voice_language
+        )
+
+    st.divider()
+
+    st.markdown("### 🛡️ SECURITY")
+
+    if st.button("🔒 LOGOUT", use_container_width=True):
         st.session_state.authenticated = False
         st.session_state.messages = []
         st.rerun()
 
-    st.markdown("---")
-    st.markdown("**Configured Services**")
+    if st.button("🧹 NEW CHAT", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.pending_prompt = None
+        st.session_state.last_audio_hash = None
+        st.rerun()
 
-    for name in SERVICE_CATALOG:
-        st.caption(name)
+    st.divider()
+    st.markdown("### 📚 SERVICES")
 
+    for name, data in SERVICE_CATALOG.items():
+        st.caption(f"• {name} — ₹{data['charge']}")
 
-# =========================================================
-# TOP BAR
-# =========================================================
+    st.divider()
+
+    st.download_button(
+        "⬇️ DOWNLOAD CHAT LOG",
+        data="\n\n".join(
+            f"{m['role'].upper()}:\n{m['content']}"
+            for m in st.session_state.messages
+        ),
+        file_name="CSC_Helpdesk_Chat.txt",
+        mime="text/plain",
+        use_container_width=True,
+        disabled=not bool(st.session_state.messages)
+    )
+
+# ==========================================================
+# 11. HEADER
+# ==========================================================
+
+now = get_indian_time()
+
 st.markdown(
-    """
-    <div class="topbar">
-        <div class="brand-left">
-            <div class="brand-mark">C</div>
-            <div>
-                <div class="brand-title">CSC HELPDESK AI</div>
-                <div class="brand-caption">Digital Service Assistant</div>
-            </div>
-        </div>
-        <div class="online-pill">
-            <span class="online-dot"></span>
-            AI Assistant Online
-        </div>
-    </div>
-    """,
+    '<div class="robot-title">CSC HELPDESK AI</div>',
+    unsafe_allow_html=True
+)
+st.markdown(
+    '<div class="robot-sub">'
+    'ADVANCED DIGITAL SERVICE INTELLIGENCE'
+    '</div>',
     unsafe_allow_html=True
 )
 
-
-# =========================================================
-# HERO
-# =========================================================
 st.markdown(
-    """
-    <div class="hero">
-        <div class="hero-small">SMART DIGITAL SERVICE CENTRE</div>
-        <div class="hero-title">Aapka kaam, <span>hamari madad.</span></div>
-        <div class="hero-description">
-            Kisi bhi configured service ke baare mein poochhiye.
-            AI aapko service, documents, approximate time aur centre ka charge batayega.
-        </div>
-    </div>
-    """,
+    '<div class="status-bar">'
+    '<span class="status-dot">●</span> SYSTEM ONLINE '
+    '&nbsp; | &nbsp; NEURAL CORE ACTIVE '
+    '&nbsp; | &nbsp; SECURE ACCESS '
+    '&nbsp; | &nbsp; INDIA IST'
+    '</div>',
     unsafe_allow_html=True
 )
 
+# ==========================================================
+# 12. HERO
+# ==========================================================
 
-# =========================================================
-# SERVICES
-# =========================================================
-st.markdown('<div class="section-title">Services</div>', unsafe_allow_html=True)
+st.markdown("""
+<div class="hero">
+    <div class="hero-label">SMART DIGITAL SERVICE CENTRE</div>
+    <div class="hero-title">
+        Aapka kaam,<br><span>hamari madad.</span>
+    </div>
+    <div class="hero-description">
+        CSC, Aadhaar, PAN Card, certificates aur online services ke
+        baare mein poochhiye. VEER-style robotic intelligence ke saath
+        apne sawalon ke simple aur step-by-step jawab paaiye.
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ==========================================================
+# 13. DASHBOARD METRICS
+# ==========================================================
+
+m1, m2, m3 = st.columns(3)
+
+with m1:
+    st.markdown(
+        f'<div class="metric-card">'
+        f'<div class="metric-number">{len(SERVICE_CATALOG)}</div>'
+        f'<div class="metric-label">CONFIGURED SERVICES</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+with m2:
+    st.markdown(
+        f'<div class="metric-card">'
+        f'<div class="metric-number">{len(st.session_state.messages)}</div>'
+        f'<div class="metric-label">CHAT MESSAGES</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+with m3:
+    st.markdown(
+        f'<div class="metric-card">'
+        f'<div class="metric-number">ONLINE</div>'
+        f'<div class="metric-label">AI CORE STATUS</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+# ==========================================================
+# 14. SERVICE CARDS
+# ==========================================================
+
+st.markdown(
+    '<div class="section-heading">▣ DIGITAL SERVICE MODULES</div>',
+    unsafe_allow_html=True
+)
 
 services = [
     ("A", "Aadhaar"),
@@ -694,139 +908,264 @@ services = [
     ("H", "Ayushman"),
     ("C", "Certificates"),
     ("P", "Pension"),
-    ("E", "e-District"),
-    ("C", "CSC Services"),
-    ("+", "More Services"),
+    ("E", "e-District")
 ]
 
-cols = st.columns(10)
+service_cols = st.columns(4)
 
-for col, (icon, name) in zip(cols, services):
-    with col:
+for i, (symbol, name) in enumerate(services):
+    with service_cols[i % 4]:
         st.markdown(
             f"""
             <div class="service-card">
-                <div class="service-icon">{icon}</div>
+                <div class="service-icon">{symbol}</div>
                 <div class="service-name">{name}</div>
             </div>
             """,
             unsafe_allow_html=True
         )
 
+# ==========================================================
+# 15. QUICK QUESTIONS
+# ==========================================================
 
-# =========================================================
-# QUICK QUESTIONS
-# =========================================================
-st.markdown('<div class="section-title">Quick Questions</div>', unsafe_allow_html=True)
-st.markdown('<div class="quick-box">', unsafe_allow_html=True)
-
-q1, q2, q3, q4 = st.columns(4)
-popular_question = None
-
-with q1:
-    if st.button("Aadhaar Print"):
-        popular_question = "Aadhaar print ka charge kitna hai?"
-
-with q2:
-    if st.button("PAN Card"):
-        popular_question = "PAN card banwane ka charge kitna hai aur kya documents lagenge?"
-
-with q3:
-    if st.button("Certificate"):
-        popular_question = "Income, caste ya residence certificate ka kaam ho jayega? Charge batao."
-
-with q4:
-    if st.button("Online Form"):
-        popular_question = "Online form bharne ka charge kitna hai?"
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-
-# =========================================================
-# CHAT HISTORY
-# =========================================================
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-
-# =========================================================
-# INPUT
-# =========================================================
-user_message = st.chat_input(
-    "Apna sawaal likhiye... jaise: PAN card banwane ka charge kitna hai?"
-)
-
-if popular_question:
-    user_message = popular_question
-
-
-# =========================================================
-# AI RESPONSE
-# =========================================================
-if user_message:
-
-    st.session_state.messages.append({
-        "role": "user",
-        "content": user_message
-    })
-
-    with st.chat_message("user"):
-        st.markdown(user_message)
-
-    with st.chat_message("assistant"):
-        try:
-            response = None
-
-            for attempt in range(3):
-                try:
-                    response = client.models.generate_content(
-                        model="gemini-3.8-flash",
-                        contents=user_message,
-                        config={
-                            "system_instruction": SYSTEM_PROMPT
-                        }
-                    )
-                    break
-                except Exception as e:
-                    if "503" in str(e) and attempt < 2:
-                        time.sleep(3)
-                    else:
-                        raise e
-
-            reply = response.text
-            st.markdown(reply)
-
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": reply
-            })
-
-        except Exception:
-            reply = (
-                "Main abhi thoda busy hoon. Kripya hamare centre ke Owner "
-                "Vicky Choudhary Ji se baat kar lijiye. "
-                "Mobile No.: 8826066468."
-            )
-
-            st.warning(reply)
-
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": reply
-            })
-
-
-# =========================================================
-# FOOTER
-# =========================================================
 st.markdown(
-    """
-    <div class="footer">
-        CSC HELPDESK AI &nbsp; • &nbsp; Digital Service Assistant
-        <br><br>
-        Fast &nbsp; • &nbsp; Simple &nbsp; • &nbsp; Secure
-    </div>
-    """,
+    '<div class="section-heading">⚡ QUICK QUESTIONS</div>',
     unsafe_allow_html=True
 )
+
+quick_questions = [
+    "Aadhaar print ka charge kitna hai?",
+    "PAN card banwane ke liye kya documents lagenge?",
+    "Income certificate ka charge aur documents batao.",
+    "Online form bharne ka charge kitna hai?"
+]
+
+qcols = st.columns(4)
+
+for i, question in enumerate(quick_questions):
+    with qcols[i]:
+        if st.button(
+            ["🪪 Aadhaar Print", "💳 PAN Card",
+             "📄 Certificate", "🌐 Online Form"][i],
+            use_container_width=True,
+            key=f"quick_{i}"
+        ):
+            st.session_state.pending_prompt = question
+            st.rerun()
+
+# ==========================================================
+# 16. CHAT HISTORY
+# ==========================================================
+
+st.markdown(
+    '<div class="section-heading">◈ NEURAL CONVERSATION</div>',
+    unsafe_allow_html=True
+)
+
+for message in st.session_state.messages:
+    avatar = "👑" if message["role"] == "user" else "🤖"
+
+    with st.chat_message(message["role"], avatar=avatar):
+        st.markdown(message["content"])
+
+# ==========================================================
+# 17. VOICE INPUT
+# ==========================================================
+
+st.markdown(
+    '<div class="voice-panel">'
+    '🎙️ <b>VOICE INPUT MODULE</b> — '
+    'Mic se Hindi, English ya Hinglish mein apna sawaal boliye.'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+audio = st.audio_input(
+    "🎙️ Record your question",
+    key=f"audio_{st.session_state.audio_counter}"
+)
+
+active_prompt = st.session_state.pending_prompt
+st.session_state.pending_prompt = None
+
+# Process each new recording once
+if audio is not None:
+    audio_bytes = audio.getvalue()
+    audio_hash = hashlib.sha256(audio_bytes).hexdigest()
+
+    if audio_hash != st.session_state.last_audio_hash:
+        st.session_state.last_audio_hash = audio_hash
+
+        with st.spinner("🎙️ Voice processing..."):
+            try:
+                audio_result = client.models.generate_content(
+                    model=model_name,
+                    contents=[
+                        "Understand the spoken audio. Return ONLY the "
+                        "transcription of the user's request. "
+                        "The audio may be Hindi, Hinglish or English.",
+                        genai.types.Part.from_bytes(
+                            data=audio_bytes,
+                            mime_type=audio.type or "audio/wav"
+                        )
+                    ]
+                )
+
+                spoken_text = (audio_result.text or "").strip()
+
+                if spoken_text:
+                    active_prompt = spoken_text
+                    st.session_state.audio_counter += 1
+                else:
+                    st.warning("Voice samajh nahi aayi. Dobara record karein.")
+
+            except Exception as exc:
+                st.error(f"Voice input error: {exc}")
+
+# ==========================================================
+# 18. CHAT INPUT
+# ==========================================================
+
+if active_prompt is None:
+    active_prompt = st.chat_input(
+        "Boss, apna sawaal likhiye..."
+    )
+
+# ==========================================================
+# 19. AI RESPONSE ENGINE
+# ==========================================================
+
+def get_live_date_answer(prompt):
+    now = get_indian_time()
+    date_question = bool(re.search(
+        r"(aaj ki date|aaj kya date|today'?s date|current date|"
+        r"aaj ki tarikh|aaj ka din|what day is today)",
+        prompt.lower()
+    ))
+    time_question = bool(re.search(
+        r"(abhi kitne baje|current time|what time is it|"
+        r"abhi ka time|kitna baj raha|time now)",
+        prompt.lower()
+    ))
+
+    if date_question or time_question:
+        date = now.strftime("%A, %d %B %Y")
+        clock = now.strftime("%I:%M %p")
+
+        if date_question and time_question:
+            return f"Boss, aaj {date} hai aur abhi India mein {clock} ho rahe hain."
+        if date_question:
+            return f"Boss, aaj {date} hai."
+        return f"Boss, abhi India mein {clock} ho rahe hain."
+
+    return None
+
+
+def create_history(messages):
+    history = []
+
+    for item in messages:
+        role = "user" if item["role"] == "user" else "model"
+        history.append({
+            "role": role,
+            "parts": [{"text": item["content"]}]
+        })
+
+    return history
+
+
+def stream_gemini(prompt, model_name):
+    history = create_history(st.session_state.messages[:-1])
+    history.append({
+        "role": "user",
+        "parts": [{"text": prompt}]
+    })
+
+    config = {
+        "system_instruction": make_system_prompt(),
+        "temperature": 0.5
+    }
+
+    response_stream = client.models.generate_content_stream(
+        model=model_name,
+        contents=history,
+        config=config
+    )
+
+    for chunk in response_stream:
+        if getattr(chunk, "text", None):
+            yield chunk.text
+
+
+if active_prompt:
+    st.session_state.messages.append({
+        "role": "user",
+        "content": active_prompt
+    })
+
+    with st.chat_message("user", avatar="👑"):
+        st.markdown(active_prompt)
+
+    live_answer = get_live_date_answer(active_prompt)
+
+    if live_answer:
+        with st.chat_message("assistant", avatar="🤖"):
+            st.markdown(live_answer)
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": live_answer
+        })
+
+        if st.session_state.voice_enabled:
+            speak_text(
+                live_answer,
+                st.session_state.voice_style,
+                st.session_state.voice_language
+            )
+
+    else:
+        with st.chat_message("assistant", avatar="🤖"):
+            try:
+                answer = st.write_stream(
+                    stream_gemini(active_prompt, model_name)
+                )
+
+                if not answer or not answer.strip():
+                    answer = (
+                        "Boss, mujhe is baar clear response nahi mila. "
+                        "Kripya apna sawaal dobara poochhein."
+                    )
+                    st.markdown(answer)
+
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
+
+                if st.session_state.voice_enabled:
+                    speak_text(
+                        answer,
+                        st.session_state.voice_style,
+                        st.session_state.voice_language
+                    )
+
+            except Exception as exc:
+                st.error(
+                    "AI Core error. API key, model name, internet "
+                    "connection aur API quota check karein."
+                )
+                st.caption(str(exc))
+
+# ==========================================================
+# 20. FOOTER
+# ==========================================================
+
+st.markdown("""
+<div class="footer">
+    CSC HELPDESK AI • ADVANCED ROBOTIC EDITION
+    <br><br>
+    SMART DIGITAL SERVICES • SECURE • RESPONSIVE • AI POWERED
+</div>
+""", unsafe_allow_html=True)
