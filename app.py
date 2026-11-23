@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import streamlit as st
 import streamlit.components.v1 as components
 from google import genai
+from google.genai import types
 
 # =====================================================
 # CSC HELPDESK AI | FUTURISTIC COMMAND CENTER
@@ -37,7 +38,12 @@ if not API_KEY:
 
 @st.cache_resource
 def get_client(key):
-    return genai.Client(api_key=key)
+    return genai.Client(
+        api_key=key,
+        http_options=types.HttpOptions(
+            api_version="v1beta"
+        )
+    )
 
 client = get_client(API_KEY)
 
